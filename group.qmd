@@ -166,6 +166,54 @@ In addition to what you see fit to execute, the following items are mandatory:
 
 Remember that the real goal is to demonstrate a mastery of the tools seen throughout the course. And that happens not only by the quantity of them used but also by the quality when executing them.
 
+## Abbrev data
+
+```{r}
+
+#Creating a new column with the collected parties
+abbrev_collect<-abbrev |> 
+  mutate(party_collect = case_when(
+    str_detect(siglas, "PSOE") |
+      str_detect(siglas, "P.S.O.E") | 
+      str_detect(siglas, "psoe") ~ "PSOE",
+    str_detect(denominacion, "CIUDADANOS") ~ "CIUDADANOS",
+    str_detect(denominacion, "UNIDAS")|
+      str_detect(siglas, "PODEMOS")|
+      str_detect(denominacion, "VERDES")|
+      str_detect(denominacion, "PODEM")|
+      str_detect(denominacion, "EZKER") ~ "UNIDAS_PODEMOS",
+    str_detect(denominacion, "BILDU")|
+      str_detect(siglas, "EH")|
+      str_detect(denominacion, "SORTU")|
+      str_detect(denominacion, "ALKARTASUNA")|
+      str_detect(denominacion, "ARALAR") |
+      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU",
+    TRUE ~ siglas #If not any of these new abreviations than values from the siglas column
+  ))
+
+#Use code below to check the actual party names and abreviations
+#PARTIDO SOCIALISTA OBRERO ESPAÑOL
+abbrev |> 
+filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
+
+#CIUDADANOS
+abbrev |> 
+  filter(str_detect(denominacion, "CIUDADANOS"))
+
+#UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
+abbrev |> 
+  filter(str_detect(denominacion, "UNIDAS")|str_detect(siglas, "PODEMOS")|str_detect(denominacion, "VERDES")|str_detect(denominacion, "PODEM")|str_detect(denominacion, "EZKER")) |> 
+  print(n=100)
+
+#EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
+abbrev |> 
+  filter(str_detect(denominacion, "BILDU")|str_detect(siglas, "EH")|str_detect(denominacion, "SORTU")|str_detect(denominacion, "ALKARTASUNA")|str_detect(denominacion, "ARALAR") |str_detect(denominacion, "ALTERNATIBA")) |> 
+  print(n=100)
+
+```
+
+## Survey data
+
 ### Data cleaning and tidy data
 
 -   You will have to discard mandatory polls that:
@@ -186,72 +234,68 @@ survey_clean <- surveys |>
   pivot_longer(cols ="UCD":"EV", #Pivoting to make tidy data
                names_to = "party",
                values_to = "vote_int")
-
-survey_clean<-survey_clean |> 
-  left_join(abbrev, by = c("party" = "siglas"))
-
-survey_clean |> 
-  distinct(party)
-
-survey_clean |> 
-  distinct(denominacion)
 ```
 
-## Abbrev data
+### Joining tables
 
 ```{r}
-abbrev_disinct <- abbrev |> 
-  left_join(survey_clean, by = c("siglas" = "party")) |> 
-  select(siglas, denominacion) |> 
-  distinct(siglas, .keep_all =TRUE)
 
-abbrev |> 
-  distinct(denominacion)
-abbrev |> 
-  distinct(siglas)
+#Joining the abbrev_collect table with the survey table and adding the abbreviations that are not in the abbrev table to the column: party_collect
+survey_clean_collect<-survey_clean |> 
+  left_join(abbrev_collect, by = c("party" = "siglas")) |> 
+  mutate(party_collect = 
+           case_when(party_collect == "PSOE" ~ "PSOE",
+                     party_collect == "CIUDADANOS" ~ "CIUDADANOS",
+                     party_collect == "UNIDAS_PODEMOS" ~ "UNIDAS_PODEMOS",
+                     party_collect == "EH_BILDU" ~ "EH_BILDU",
+                     TRUE ~ party))
+```
 
-#PARTIDO SOCIALISTA OBRERO ESPAÑOL
-abbrev |> 
-  filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
+### Creating ID
 
-#CIUDADANOS
-abbrev |> 
-  filter(str_detect(denominacion, "CIUDADANOS"))
+Creating an ID to match the election_data table
 
-#UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
-abbrev |> 
-  filter(str_detect(denominacion, "UNIDAS")|str_detect(siglas, "PODEMOS")|str_detect(denominacion, "VERDES")|str_detect(denominacion, "PODEM")|str_detect(denominacion, "EZKER")) |> 
-  print(n=100)
-
-#EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
-abbrev |> 
-  filter(str_detect(denominacion, "BILDU")|str_detect(siglas, "EH")|str_detect(denominacion, "SORTU")|str_detect(denominacion, "ALKARTASUNA")|str_detect(denominacion, "ARALAR") |str_detect(denominacion, "ALTERNATIBA")) |> 
-  print(n=100)
+```{r}
+survey_clean_collect <- survey_clean_collect |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 
 ```
 
 ## Election_data
 
-Data cleaning and tidy data
+### Data cleaning and tidy data
 
 ```{r}
 election_data_clean <- election_data |> 
   pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
                names_to = "party",
                values_to = "votes") |> 
-left_join(abbrev, by = c("party" = "denominacion")) 
-
+  mutate(date_elec = make_date(anno, mes))
+  
 ```
 
-## Survey data
+### Joining abbrev_collect
 
-Joining survey_clean with election_data_clean
+This chunk of code does not work and I cant seem o figure out why \[NIENLE\]
+
+```{r}
+election_data_clean <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party", "denominacion"))
+```
+
+Creating ID to join tables
+
+```{r}
+election_data_clean <- election_data_clean |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
+```
+
+## Joining survey and election data 
+
+Joining survey_clean with election_data_clean using the id_join from both tables
 
 ```{r}
 
-survey_elec_data <- survey_clean |> 
-   left_join(election_data_clean, by = c("party" = "siglas")) |> 
-   select
 ```
 
 ### In which election were the polls most wrong?
