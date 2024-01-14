@@ -7,7 +7,7 @@ format:
     toc: true
     toc-location: right
     toc-title: Índice
-editor: visual
+editor: visual 
 editor_options: 
   chunk_output_type: console
 ---
@@ -290,7 +290,7 @@ election_data_clean <- election_data_clean |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
-## Joining survey and election data 
+## Joining survey and election data
 
 Joining survey_clean with election_data_clean using the id_join from both tables
 
