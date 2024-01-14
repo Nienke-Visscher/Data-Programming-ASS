@@ -8,6 +8,8 @@ format:
     toc-location: right
     toc-title: Índice
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## Instructions (read before starting)
@@ -164,4 +166,96 @@ In addition to what you see fit to execute, the following items are mandatory:
 
 Remember that the real goal is to demonstrate a mastery of the tools seen throughout the course. And that happens not only by the quantity of them used but also by the quality when executing them.
 
-testtest
+### Data cleaning and tidy data
+
+-   You will have to discard mandatory polls that:
+
+    -   refer to elections before 2018
+    -   that are exit polls
+    -   have a sample size of less than 750 or are unknown
+    -   that have less than 1 or less fieldwork days
+
+```{r}
+survey_clean <- surveys |> 
+ filter(year(date_elec) >= 2018) |> #Filtering only years >2018
+ filter(exit_poll == FALSE) |> # Only keeping non exit polls
+ filter(size >750| size != NA) |> #Only keeping cases with a size ,larger than 750 or are bot NA
+ mutate(field_days = field_date_to - field_date_from) |> #New column to count the number of field days
+ relocate(field_days, .after = field_date_to) |> #Relocating the field_days column
+  filter(field_days>0) |> #Filtering cases with field days >0
+  pivot_longer(cols ="UCD":"EV", #Pivoting to make tidy data
+               names_to = "party",
+               values_to = "vote_int")
+
+survey_clean<-survey_clean |> 
+  left_join(abbrev, by = c("party" = "siglas"))
+
+survey_clean |> 
+  distinct(party)
+
+survey_clean |> 
+  distinct(denominacion)
+```
+
+## Abbrev data
+
+```{r}
+abbrev_disinct <- abbrev |> 
+  left_join(survey_clean, by = c("siglas" = "party")) |> 
+  select(siglas, denominacion) |> 
+  distinct(siglas, .keep_all =TRUE)
+
+abbrev |> 
+  distinct(denominacion)
+abbrev |> 
+  distinct(siglas)
+
+#PARTIDO SOCIALISTA OBRERO ESPAÑOL
+abbrev |> 
+  filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
+
+#CIUDADANOS
+abbrev |> 
+  filter(str_detect(denominacion, "CIUDADANOS"))
+
+#UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
+abbrev |> 
+  filter(str_detect(denominacion, "UNIDAS")|str_detect(siglas, "PODEMOS")|str_detect(denominacion, "VERDES")|str_detect(denominacion, "PODEM")|str_detect(denominacion, "EZKER")) |> 
+  print(n=100)
+
+#EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
+abbrev |> 
+  filter(str_detect(denominacion, "BILDU")|str_detect(siglas, "EH")|str_detect(denominacion, "SORTU")|str_detect(denominacion, "ALKARTASUNA")|str_detect(denominacion, "ARALAR") |str_detect(denominacion, "ALTERNATIBA")) |> 
+  print(n=100)
+
+```
+
+## Election_data
+
+Data cleaning and tidy data
+
+```{r}
+election_data_clean <- election_data |> 
+  pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
+               names_to = "party",
+               values_to = "votes") |> 
+left_join(abbrev, by = c("party" = "denominacion")) 
+
+```
+
+## Survey data
+
+Joining survey_clean with election_data_clean
+
+```{r}
+
+survey_elec_data <- survey_clean |> 
+   left_join(election_data_clean, by = c("party" = "siglas")) |> 
+   select
+```
+
+### In which election were the polls most wrong?
+
+```{r}
+
+```
