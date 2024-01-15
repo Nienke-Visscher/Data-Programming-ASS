@@ -341,9 +341,9 @@ unique(survey_elec_sample$type_survey)
 
 ```{r}
 
- survey_elec_sample %>%
-  mutate(diff_vote_int = votes - vote_int) %>%
-  group_by(date_elec, id_codigo) %>%
+ survey_elec_sample |> 
+  mutate(diff_vote_int = votes - vote_int) |> 
+  group_by(date_elec, id_codigo) |> 
   mutate(avg_diff_vote_int = mean(diff_vote_int, na.rm = TRUE)) |> 
   ungroup() |> 
   mutate(avg_diff_vote_int_2 = avg_diff_vote_int^2 ) |> 
