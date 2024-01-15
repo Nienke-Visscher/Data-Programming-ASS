@@ -14,7 +14,7 @@ editor_options:
 
 ## Instructions (read before starting)
 
--   Modify within the `.qmd` document your personal data (names and ID) located in the header of the file
+-   Modify within the `.qmd` document your personal data (names and ID) located in the header of the file.
 
 -   Make sure, **BEFORE further editing** the document, that the `.qmd` file is rendered correctly and the corresponding `.html` is generated in your local folder on your computer.
 
