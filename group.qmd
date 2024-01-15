@@ -283,7 +283,8 @@ election_data_clean <- election_data |>
                values_to = "votes") 
 
 election_data_clean<-election_data_clean|> 
-  mutate(date_elec = make_date(anno, mes))
+  mutate(date_elec = make_date(anno, mes)) |> 
+  select(-tipo_eleccion, -codigo_distrito_electoral)
 
 election_data_clean_red <- election_data_clean |> 
   select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
@@ -316,15 +317,37 @@ survey_elec <- election_data_clean_red |>
   left_join(survey_clean_collect_red, by = c("id_join" = "id_join"), relationship = "many-to-many") 
 
 survey_elec<- survey_elec |> 
-mutate(party_collect =party_collect.x) |> 
-select(-party_collect.y, -party_collect.x) 
+  mutate(party_collect =party_collect.x) |> 
+  select(-party_collect.y, -party_collect.x) |> 
+  mutate(date_elec = date_elec.x) |> 
+  mutate(date_elec_survey = date_elec.y) |> 
+  select(-date_elec.x, -date_elec.y)
 
+survey_elec_sample <- survey_elec |> 
+  slice_sample(prop =0.10)
+
+survey_elec_sample<-survey_elec_sample |> 
+  mutate(id_codigo = paste(codigo_ccaa, codigo_municipio, codigo_provincia, sep = "-") )
+  
+survey_elec_sample |> 
+  group_by(id_join, id_pollster, id_codigo) |> 
+  filter(field_days == max(field_days)) |> 
+  ungroup()
+
+unique(survey_elec_sample$type_survey)
 ```
 
 ### In which election were the polls most wrong?
 
 ```{r}
 
-survey_elec<-survey_elec
+ survey_elec_sample %>%
+  mutate(diff_vote_int = votes - vote_int) %>%
+  group_by(date_elec, id_codigo) %>%
+  mutate(avg_diff_vote_int = mean(diff_vote_int, na.rm = TRUE)) |> 
+  ungroup() |> 
+  mutate(avg_diff_vote_int_2 = avg_diff_vote_int^2 ) |> 
+  View()
+
 
 ```
