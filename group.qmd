@@ -171,7 +171,7 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
 ```{r}
 
 #Creating a new column with the collected parties
-abbrev_collect<-abbrev |> 
+ abbrev_collect<-abbrev |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
@@ -188,10 +188,11 @@ abbrev_collect<-abbrev |>
       str_detect(denominacion, "ALKARTASUNA")|
       str_detect(denominacion, "ARALAR") |
       str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU",
-    TRUE ~ siglas #If not any of these new abreviations than values from the siglas column
-  ))
+    TRUE ~ siglas))|> 
+  distinct(denominacion, .keep_all = TRUE) 
 
-#Use code below to check the actual party names and abreviations
+ 
+ #Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
 abbrev |> 
 filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
@@ -234,6 +235,7 @@ survey_clean <- surveys |>
   pivot_longer(cols ="UCD":"EV", #Pivoting to make tidy data
                names_to = "party",
                values_to = "vote_int")
+
 ```
 
 ### Joining tables
@@ -248,7 +250,16 @@ survey_clean_collect<-survey_clean |>
                      party_collect == "CIUDADANOS" ~ "CIUDADANOS",
                      party_collect == "UNIDAS_PODEMOS" ~ "UNIDAS_PODEMOS",
                      party_collect == "EH_BILDU" ~ "EH_BILDU",
-                     TRUE ~ party))
+                     TRUE ~ party)) |> 
+  select(-party)
+
+survey_clean_collect_red <- survey_clean_collect |> 
+  select(-field_date_from, -field_date_to, -exit_poll) |> 
+  drop_na(vote_int)
+
+
+abbrev_collect<- abbrev_collect |> 
+  select(-siglas)
 ```
 
 ### Creating ID
@@ -269,24 +280,30 @@ survey_clean_collect <- survey_clean_collect |>
 election_data_clean <- election_data |> 
   pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
                names_to = "party",
-               values_to = "votes") |> 
+               values_to = "votes") 
+
+election_data_clean<-election_data_clean|> 
   mutate(date_elec = make_date(anno, mes))
+
+election_data_clean_red <- election_data_clean |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  filter(year(date_elec) >= 2018) |> 
+  drop_na(votes)
   
 ```
 
 ### Joining abbrev_collect
 
-This chunk of code does not work and I cant seem o figure out why \[NIENLE\]
-
 ```{r}
 election_data_clean <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party", "denominacion"))
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
 ```
 
 Creating ID to join tables
 
 ```{r}
-election_data_clean <- election_data_clean |> 
+election_data_clean_red <- election_data_clean_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
@@ -295,11 +312,19 @@ election_data_clean <- election_data_clean |>
 Joining survey_clean with election_data_clean using the id_join from both tables
 
 ```{r}
+survey_elec <- election_data_clean_red |> 
+  left_join(survey_clean_collect_red, by = c("id_join" = "id_join"), relationship = "many-to-many") 
+
+survey_elec<- survey_elec |> 
+mutate(party_collect =party_collect.x) |> 
+select(-party_collect.y, -party_collect.x) 
 
 ```
 
 ### In which election were the polls most wrong?
 
 ```{r}
+
+survey_elec<-survey_elec
 
 ```
