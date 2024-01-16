@@ -215,7 +215,7 @@ abbrev |>
 
 ## Survey data
 
-### Data cleaning and tidy data
+### Data cleaning and tidy 
 
 -   You will have to discard mandatory polls that:
 
