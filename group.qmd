@@ -166,6 +166,8 @@ In addition to what you see fit to execute, the following items are mandatory:
 
 Remember that the real goal is to demonstrate a mastery of the tools seen throughout the course. And that happens not only by the quantity of them used but also by the quality when executing them.
 
+# Nienke
+
 ## Abbrev data
 
 ```{r}
@@ -328,27 +330,43 @@ survey_elec_sample <- survey_elec |>
   slice_sample(prop =0.10)
 
 survey_elec_sample<-survey_elec_sample |> 
-  mutate(id_codigo = paste(codigo_ccaa, codigo_municipio, codigo_provincia, sep = "-") )
+  mutate(id_codigo = paste(codigo_ccaa, codigo_municipio, codigo_provincia, sep = "-") ) |> 
+  mutate(id_codigo_party = paste(id_codigo, date_elec, id_pollster, party_collect,sep = "-"))
   
-survey_elec_sample |> 
-  group_by(id_join, id_pollster, id_codigo) |> 
-  filter(field_days == max(field_days)) |> 
-  ungroup()
 
+duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] #There are may duplictaes
+
+survey_elec_sample<-survey_elec_sample |> 
+  filter(!duplicated(survey_elec_sample))  
 
 ```
 
 ### In which election were the polls most wrong?
 
+The difference in voting intentions with the actual votes is computed by subtracting the voting intentions from the votes. This difference is then squared to release the negatives as we are interested in the total absolute count of error between the intended and the actual votes. Then, the square root of the mean of this difference grouped by election date has been computed. The results show that the polls of the elections of 11-2019 were most wrong.
+
 ```{r}
 
- survey_elec_sample |> 
+ survey_elec_sample<-survey_elec_sample |> 
   mutate(diff_vote_int = votes - vote_int) |> 
-  group_by(date_elec, id_codigo) |> 
-  mutate(avg_diff_vote_int = mean(diff_vote_int, na.rm = TRUE)) |> 
-  ungroup() |> 
-  mutate(avg_diff_vote_int_2 = avg_diff_vote_int^2 ) |> 
-  View()
+  mutate(diff_vote_int_2 =diff_vote_int^2) |> #As the difference can be both positive and negative, the differences in votes are squared to get rid of the negatives
+  group_by(date_elec) |> 
+  mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> #Taking the squareroot to return the variable in to the orginal units
+  ungroup() 
+ 
+ survey_elec_sample |> 
+   distinct(avg_diff_vote_int, date_elec)
 
+```
+
+### How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
+
+```{r}
+
+```
+
+### Which polling houses got it right the most and which ones deviated the most from the results?
+
+```{r}
 
 ```
