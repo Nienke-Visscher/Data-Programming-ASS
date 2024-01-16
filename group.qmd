@@ -253,6 +253,7 @@ survey_clean_collect<-survey_clean |>
                      TRUE ~ party)) |> 
   select(-party)
 
+#Reducing the data set by taking out unsuseful variables
 survey_clean_collect_red <- survey_clean_collect |> 
   select(-field_date_from, -field_date_to, -exit_poll) |> 
   drop_na(vote_int)
@@ -267,7 +268,7 @@ abbrev_collect<- abbrev_collect |>
 Creating an ID to match the election_data table
 
 ```{r}
-survey_clean_collect <- survey_clean_collect |> 
+survey_clean_collect_red <- survey_clean_collect_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 
 ```
@@ -296,12 +297,12 @@ election_data_clean_red <- election_data_clean |>
 ### Joining abbrev_collect
 
 ```{r}
-election_data_clean <- election_data_clean |> 
+election_data_clean_red <- election_data_clean_red |> 
   left_join(abbrev_collect, by = c("party"= "denominacion"))
 
 ```
 
-Creating ID to join tables
+### Creating ID to join tables
 
 ```{r}
 election_data_clean_red <- election_data_clean_red |> 
@@ -334,7 +335,7 @@ survey_elec_sample |>
   filter(field_days == max(field_days)) |> 
   ungroup()
 
-unique(survey_elec_sample$type_survey)
+
 ```
 
 ### In which election were the polls most wrong?
