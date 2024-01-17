@@ -255,6 +255,7 @@ survey_clean_collect<-survey_clean |>
                      TRUE ~ party)) |> 
   select(-party)
 
+
 #Reducing the data set by taking out unsuseful variables
 survey_clean_collect_red <- survey_clean_collect |> 
   select(-field_date_from, -field_date_to, -exit_poll) |> 
@@ -324,18 +325,18 @@ survey_elec<- survey_elec |>
   select(-party_collect.y, -party_collect.x) |> 
   mutate(date_elec = date_elec.x) |> 
   mutate(date_elec_survey = date_elec.y) |> 
-  select(-date_elec.x, -date_elec.y)
+  select(-date_elec.x, -date_elec.y) |> 
+  drop_na(votes) |> 
+  drop_na(vote_int)
 
+#Only for the purpose of coding 
 survey_elec_sample <- survey_elec |> 
   slice_sample(prop =0.10)
 
-survey_elec_sample<-survey_elec_sample |> 
-  mutate(id_codigo = paste(codigo_ccaa, codigo_municipio, codigo_provincia, sep = "-") ) |> 
-  mutate(id_codigo_party = paste(id_codigo, date_elec, id_pollster, party_collect,sep = "-"))
-  
+#Checking for duplicates -> many duplicates
+duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
 
-duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] #There are may duplictaes
-
+#Only keeping 1 of the duplicate rows
 survey_elec_sample<-survey_elec_sample |> 
   filter(!duplicated(survey_elec_sample))  
 
@@ -343,17 +344,38 @@ survey_elec_sample<-survey_elec_sample |>
 
 ### In which election were the polls most wrong?
 
-The difference in voting intentions with the actual votes is computed by subtracting the voting intentions from the votes. This difference is then squared to release the negatives as we are interested in the total absolute count of error between the intended and the actual votes. Then, the square root of the mean of this difference grouped by election date has been computed. The results show that the polls of the elections of 11-2019 were most wrong.
-
 ```{r}
 
- survey_elec_sample<-survey_elec_sample |> 
-  mutate(diff_vote_int = votes - vote_int) |> 
-  mutate(diff_vote_int_2 =diff_vote_int^2) |> #As the difference can be both positive and negative, the differences in votes are squared to get rid of the negatives
-  group_by(date_elec) |> 
-  mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> #Taking the squareroot to return the variable in to the orginal units
+#Summing the total votes per party per election
+survey_elec_sample<-survey_elec_sample |> 
+  group_by(date_elec, party_collect) |> 
+  mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
+#Summing the total votes voted per election
+survey_elec_sample<-survey_elec_sample |> 
+   group_by(date_elec) |> 
+   mutate(votes_elec_total = sum(votes)) |> 
+   ungroup()
+ 
+#Computing a percentage of how many votes a party received compared to the total votes voted
+survey_elec_sample<-survey_elec_sample |> 
+   mutate(votes_elec_party_perc = (votes_elec_party/votes_elec_total)*100)
+ 
+#subtracting the voting intentions (in percentage) of the percenatage of votes gained per per party per election. 
+#As the difference can be both positive and negative, the differences in votes are squared to account for the negatives
+survey_elec_sample<-survey_elec_sample |>
+  mutate(diff_vote_int = votes_elec_party_perc - vote_int) |> 
+  mutate(diff_vote_int_2 =diff_vote_int^2) 
+  
+#Creating the average difference between percentage of votes gained and voting intentions per election
+#Taking the squareroot to return the variable in to the orginal units
+survey_elec_sample<-survey_elec_sample |> 
+   group_by(date_elec) |> 
+  mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> 
+  ungroup() 
+
+#Checking in which election the polls were post wrong 
  survey_elec_sample |> 
    distinct(avg_diff_vote_int, date_elec)
 
@@ -361,12 +383,44 @@ The difference in voting intentions with the actual votes is computed by subtrac
 
 ### How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 
-```{r}
+CS = CUIDANOS, IU = UNIDAS_PODEMOS
 
+Problem: There is no data on CIUDANOS, UNIDAS_PODEMOS and MP
+
+```{r}
+#Computing the average polling error per party per election
+survey_elec_national_sample<-survey_elec_sample |> 
+  filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CIUDADANOS "|party_collect =="MP"|party_collect =="UNIDAS_PODEMOS") |> 
+  group_by(date_elec, party_collect) |> 
+  mutate(avg_diff_poll = sqrt(mean(diff_vote_int_2, na.rm = TRUE)) ) |> 
+  ungroup() 
+
+#Obtaining the results, note: for some parties no result
+survey_elec_national_sample |> 
+  distinct(avg_diff_poll, date_elec, party_collect) |> 
+  arrange(date_elec)
 ```
 
 ### Which polling houses got it right the most and which ones deviated the most from the results?
 
 ```{r}
+#Computing the average polling error per polling house per election and obtaining the minimum and maxium polling with their corresonding pollhouses per election
+survey_elec_sample<-survey_elec_sample |> 
+  group_by(id_pollster, date_elec) |> 
+  mutate(avg_diff_pollhouse = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |>
+  ungroup() |> 
+  group_by(date_elec) |> 
+  mutate(max_avg_diff_pollhouse = max(avg_diff_pollhouse)) |> 
+  mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse))
 
+#Obtaining the result for the maximum polling error
+survey_elec_sample|> 
+  distinct(max_avg_diff_pollhouse, date_elec, id_pollster) |> 
+  arrange(date_elec)
+
+#Obtaining the result for the minimum polling error
+survey_elec_sample|> 
+  distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
+  arrange(date_elec)
+  
 ```
