@@ -207,7 +207,7 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
     TRUE ~ "OTHER"))|> 
     distinct(denominacion, .keep_all = TRUE) 
 
-nationalist_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
+national_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
  
 #JUST TO CHECK-- Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
