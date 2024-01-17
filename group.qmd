@@ -207,7 +207,7 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
     TRUE ~ "OTHER"))|> 
     distinct(denominacion, .keep_all = TRUE) 
 
- right_wing_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
+nationalist_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
  
 #JUST TO CHECK-- Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
@@ -311,6 +311,10 @@ election_data_clean_red <- election_data_clean |>
 ```
 
 ### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+
+```{r}
+
+```
 
 ### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
