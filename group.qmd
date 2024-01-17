@@ -169,30 +169,47 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
 ## Abbrev data
 
 ```{r}
-
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
-      str_detect(siglas, "psoe") ~ "PSOE",
-    str_detect(denominacion, "CIUDADANOS") ~ "CIUDADANOS",
+      str_detect(siglas, "psoe") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
+    
+    str_detect(siglas, "PP") ~ "PP", # PARTIDO POPULAR
+    
+    
+    str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
+    
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
-      str_detect(denominacion, "EZKER") ~ "UNIDAS_PODEMOS",
+      str_detect(denominacion, "EZKER") |
+      str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
+    
     str_detect(denominacion, "BILDU")|
       str_detect(siglas, "EH")|
       str_detect(denominacion, "SORTU")|
       str_detect(denominacion, "ALKARTASUNA")|
       str_detect(denominacion, "ARALAR") |
-      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU",
-    TRUE ~ siglas))|> 
-  distinct(denominacion, .keep_all = TRUE) 
+      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU", # EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
+      
+      str_detect(denominacion, "VASCO") ~ "P_N_VASCO", # PARTIDO NACIONALISTA VASCO
+      str_detect(denominacion, "UNIO") ~ "CONV_UNIO", # CONVERGÈNCIA I UNIÓ
+      str_detect(siglas, "BNG") ~ "B_N_GALLEGO", # BLOQUE NACIONALISTA GALLEGO
+      str_detect(siglas, "VOX") ~ "VOX", # VOX
+      str_detect(siglas, "PAÍS") ~ "MP", # MÁS PAÍS
+      str_detect(siglas, "COMPROMÍS") ~ "MAS_PAIS", # COMPROMÍS
+      str_detect(siglas, "ERC") |
+      str_detect(denominacion, "esquerra") ~ "ERC", # ESQUERRA REPUBLICANA DE CATALUNYA
+    
+    TRUE ~ "OTHER"))|> 
+    distinct(denominacion, .keep_all = TRUE) 
 
+ right_wing_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
  
- #Use code below to check the actual party names and abreviations
+#JUST TO CHECK-- Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
 abbrev |> 
 filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
@@ -292,6 +309,18 @@ election_data_clean_red <- election_data_clean |>
   drop_na(votes)
   
 ```
+
+### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+
+### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+
+### Which party was the second when the first was the PSOE? And when the first was the PP?
+
+```{r}
+
+```
+
+### Who benefits from low turnout?
 
 ### Joining abbrev_collect
 
