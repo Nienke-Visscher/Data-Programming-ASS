@@ -168,33 +168,52 @@ In addition to what you see fit to execute, the following items are mandatory:
 
 Remember that the real goal is to demonstrate a mastery of the tools seen throughout the course. And that happens not only by the quantity of them used but also by the quality when executing them.
 
+# Nienke
+
 ## Abbrev data
 
 ```{r}
-
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
-      str_detect(siglas, "psoe") ~ "PSOE",
-    str_detect(denominacion, "CIUDADANOS") ~ "CIUDADANOS",
+      str_detect(siglas, "psoe") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
+    
+    str_detect(siglas, "PP") ~ "PP", # PARTIDO POPULAR
+    
+    
+    str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
+    
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
-      str_detect(denominacion, "EZKER") ~ "UNIDAS_PODEMOS",
+      str_detect(denominacion, "EZKER") |
+      str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
+    
     str_detect(denominacion, "BILDU")|
       str_detect(siglas, "EH")|
       str_detect(denominacion, "SORTU")|
       str_detect(denominacion, "ALKARTASUNA")|
       str_detect(denominacion, "ARALAR") |
-      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU",
-    TRUE ~ siglas))|> 
-  distinct(denominacion, .keep_all = TRUE) 
+      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU", # EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
+      
+      str_detect(denominacion, "VASCO") ~ "P_N_VASCO", # PARTIDO NACIONALISTA VASCO
+      str_detect(denominacion, "UNIO") ~ "CONV_UNIO", # CONVERGÈNCIA I UNIÓ
+      str_detect(siglas, "BNG") ~ "B_N_GALLEGO", # BLOQUE NACIONALISTA GALLEGO
+      str_detect(siglas, "VOX") ~ "VOX", # VOX
+      str_detect(siglas, "PAÍS") ~ "MP", # MÁS PAÍS
+      str_detect(siglas, "COMPROMÍS") ~ "MAS_PAIS", # COMPROMÍS
+      str_detect(siglas, "ERC") |
+      str_detect(denominacion, "esquerra") ~ "ERC", # ESQUERRA REPUBLICANA DE CATALUNYA
+    
+    TRUE ~ "OTHER"))|> 
+    distinct(denominacion, .keep_all = TRUE) 
 
+ right_wing_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
  
- #Use code below to check the actual party names and abreviations
+#JUST TO CHECK-- Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
 abbrev |> 
 filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
@@ -255,6 +274,7 @@ survey_clean_collect<-survey_clean |>
                      TRUE ~ party)) |> 
   select(-party)
 
+
 #Reducing the data set by taking out unsuseful variables
 survey_clean_collect_red <- survey_clean_collect |> 
   select(-field_date_from, -field_date_to, -exit_poll) |> 
@@ -296,6 +316,18 @@ election_data_clean_red <- election_data_clean |>
   
 ```
 
+### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+
+### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+
+### Which party was the second when the first was the PSOE? And when the first was the PP?
+
+```{r}
+
+```
+
+### Who benefits from low turnout?
+
 ### Joining abbrev_collect
 
 (Frederick) Joined the two tables (non-reduced) for the Map visualization
@@ -329,19 +361,20 @@ survey_elec<- survey_elec |>
   select(-party_collect.y, -party_collect.x) |> 
   mutate(date_elec = date_elec.x) |> 
   mutate(date_elec_survey = date_elec.y) |> 
-  select(-date_elec.x, -date_elec.y)
+  select(-date_elec.x, -date_elec.y) |> 
+  drop_na(votes) |> 
+  drop_na(vote_int)
 
+#Only for the purpose of coding 
 survey_elec_sample <- survey_elec |> 
   slice_sample(prop =0.10)
 
-survey_elec_sample<-survey_elec_sample |> 
-  mutate(id_codigo = paste(codigo_ccaa, codigo_municipio, codigo_provincia, sep = "-") )
-  
-survey_elec_sample |> 
-  group_by(id_join, id_pollster, id_codigo) |> 
-  filter(field_days == max(field_days)) |> 
-  ungroup()
+#Checking for duplicates -> many duplicates
+duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
 
+#Only keeping 1 of the duplicate rows
+survey_elec_sample<-survey_elec_sample |> 
+  filter(!duplicated(survey_elec_sample))  
 
 ```
 
@@ -349,15 +382,83 @@ survey_elec_sample |>
 
 ```{r}
 
+#Summing the total votes per party per election
+survey_elec_sample<-survey_elec_sample |> 
+  group_by(date_elec, party_collect) |> 
+  mutate(votes_elec_party = sum(votes)) |> 
+  ungroup() 
+ 
+#Summing the total votes voted per election
+survey_elec_sample<-survey_elec_sample |> 
+   group_by(date_elec) |> 
+   mutate(votes_elec_total = sum(votes)) |> 
+   ungroup()
+ 
+#Computing a percentage of how many votes a party received compared to the total votes voted
+survey_elec_sample<-survey_elec_sample |> 
+   mutate(votes_elec_party_perc = (votes_elec_party/votes_elec_total)*100)
+ 
+#subtracting the voting intentions (in percentage) of the percenatage of votes gained per per party per election. 
+#As the difference can be both positive and negative, the differences in votes are squared to account for the negatives
+survey_elec_sample<-survey_elec_sample |>
+  mutate(diff_vote_int = votes_elec_party_perc - vote_int) |> 
+  mutate(diff_vote_int_2 =diff_vote_int^2) 
+  
+#Creating the average difference between percentage of votes gained and voting intentions per election
+#Taking the squareroot to return the variable in to the orginal units
+survey_elec_sample<-survey_elec_sample |> 
+   group_by(date_elec) |> 
+  mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> 
+  ungroup() 
+
+#Checking in which election the polls were post wrong 
  survey_elec_sample |> 
-  mutate(diff_vote_int = votes - vote_int) |> 
-  group_by(date_elec, id_codigo) |> 
-  mutate(avg_diff_vote_int = mean(diff_vote_int, na.rm = TRUE)) |> 
+   distinct(avg_diff_vote_int, date_elec)
+
+```
+
+### How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
+
+CS = CUIDANOS, IU = UNIDAS_PODEMOS
+
+Problem: There is no data on CIUDANOS, UNIDAS_PODEMOS and MP
+
+```{r}
+#Computing the average polling error per party per election
+survey_elec_national_sample<-survey_elec_sample |> 
+  filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CIUDADANOS "|party_collect =="MP"|party_collect =="UNIDAS_PODEMOS") |> 
+  group_by(date_elec, party_collect) |> 
+  mutate(avg_diff_poll = sqrt(mean(diff_vote_int_2, na.rm = TRUE)) ) |> 
+  ungroup() 
+
+#Obtaining the results, note: for some parties no result
+survey_elec_national_sample |> 
+  distinct(avg_diff_poll, date_elec, party_collect) |> 
+  arrange(date_elec)
+```
+
+### Which polling houses got it right the most and which ones deviated the most from the results?
+
+```{r}
+#Computing the average polling error per polling house per election and obtaining the minimum and maxium polling with their corresonding pollhouses per election
+survey_elec_sample<-survey_elec_sample |> 
+  group_by(id_pollster, date_elec) |> 
+  mutate(avg_diff_pollhouse = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |>
   ungroup() |> 
-  mutate(avg_diff_vote_int_2 = avg_diff_vote_int^2 ) |> 
-  View()
+  group_by(date_elec) |> 
+  mutate(max_avg_diff_pollhouse = max(avg_diff_pollhouse)) |> 
+  mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse))
 
+#Obtaining the result for the maximum polling error
+survey_elec_sample|> 
+  distinct(max_avg_diff_pollhouse, date_elec, id_pollster) |> 
+  arrange(date_elec)
 
+#Obtaining the result for the minimum polling error
+survey_elec_sample|> 
+  distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
+  arrange(date_elec)
+  
 ```
 
 ## Free questions
