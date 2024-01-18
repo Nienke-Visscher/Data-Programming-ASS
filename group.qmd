@@ -542,13 +542,13 @@ For each community voter turnouts are calculated.
 # Voter turnout regions
 election_data_clean_lollipop <-
   election_data_clean |> 
-  filter(date_elec == "2019-04-01") |> 
-  mutate(votes_casted = votos_candidaturas + votos_blancos) |> 
-  select(-votos_blancos, -votos_candidaturas) |> 
+  filter(date_elec >= "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
+  select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
-  distinct(municipio_id, .keep_all = T) |> 
-  select(municipio_id, codigo_ccaa, votes_casted, censo) |> 
-  group_by(codigo_ccaa) |> 
+  distinct(municipio_id, mes, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |> 
+  group_by(codigo_ccaa, mes) |> 
   summarise(votes_sum = sum(votes_casted),
             population_sum = sum(censo) ) |> 
   ungroup() |> 
@@ -558,12 +558,13 @@ election_data_clean_lollipop <-
 
 election_data_clean_lollipop_avg <-
   election_data_clean |> 
-  filter(date_elec == "2019-04-01") |> 
-  mutate(votes_casted = votos_candidaturas + votos_blancos) |> 
-  select(-votos_blancos, -votos_candidaturas) |> 
+  filter(date_elec >= "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
+  select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
-  distinct(municipio_id, .keep_all = T) |> 
-  select(municipio_id, codigo_ccaa, votes_casted, censo) |> 
+  distinct(municipio_id, mes, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |>
+  group_by(mes) |> 
   summarise(votes_sum = sum(votes_casted),
             population_sum = sum(censo) ) |>
   mutate(voter_turnout = (votes_sum / population_sum) * 100)
@@ -572,37 +573,128 @@ election_data_clean_lollipop_avg$codigo_ccaa <- "00"
 
 
 election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election_data_clean_lollipop_avg)
+```
 
-# ordering regions by voter turnout
-order_by_voter_turnout <- election_data_clean_lollipop %>%
-  arrange(voter_turnout) |> 
+Data manipulation for differences and factorising 'codigo_ccaa'
+
+```{r}
+# differences
+election_data_clean_lollipop_dif <- election_data_clean_lollipop |> 
+  group_by(codigo_ccaa) |> 
+  mutate(difference = voter_turnout - lag(voter_turnout, default = voter_turnout[1])) |> 
+  ungroup() |> 
+  filter(mes == "11")
+
+# ordering codigo variable for subsequent plot
+max_turnout_mes04 <- election_data_clean_lollipop %>%
+  filter(mes == "04") %>%
+  group_by(codigo_ccaa) %>%
+  summarize(max_turnout = max(voter_turnout))
+
+# Order codigo_ccaa based on max_turnout_mes11
+order_by_max_turnout <- max_turnout_mes04 %>%
+  arrange(max_turnout) %>%
   pull(codigo_ccaa)
 
-election_data_clean_lollipop$codigo_ccaa <- factor(election_data_clean_lollipop$codigo_ccaa, levels = fct_relevel(order_by_voter_turnout))
+# Apply the order to the codigo_ccaa factor
+election_data_clean_lollipop$codigo_ccaa <- factor(
+  election_data_clean_lollipop$codigo_ccaa,
+  levels = order_by_max_turnout
+)
 ```
 
 Creating the lollipop graph
 
 ```{r}
-ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa)) + 
-  geom_segment(aes(xend = 0, yend = codigo_ccaa), color = "black") +
-  geom_point(position = position_dodge2(width = 0.5), color = "black", size = 2) +
-  geom_point(data = filter(election_data_clean_lollipop, codigo_ccaa == "00"),
-             aes(x = voter_turnout, y = codigo_ccaa),
-             color = "red", size = 3) +
-   geom_segment(data = filter(election_data_clean_lollipop, codigo_ccaa == "00"),
-               aes(x = voter_turnout, y = codigo_ccaa, xend = 0, yend = codigo_ccaa),
-               color = "red") + 
-  scale_x_continuous(expand =expansion(mult = c(0, .08)),
-                     breaks = seq(0, 100, by = 10)) +
-  labs(title = "Voter Turnout by Region (April 2019)",
+# for segments
+data_00 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "00")
+data_01 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "01")
+data_02 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "02")
+data_03 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "03")
+data_04 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "04")
+data_05 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "05")
+data_06 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "06")
+data_07 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "07")
+data_08 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "08")
+data_09 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "09")
+data_10 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "10")
+data_11 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "11")
+data_12 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "12")
+data_13 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "13")
+data_14 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "14")
+data_15 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "15")
+data_16 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "16")
+data_17 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "17")
+data_18 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "18")
+data_19 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "19")
+
+# for differently colored Spain label
+label_Spain <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa =="00") |> 
+  mutate(codigo_ccaa = as.character(codigo_ccaa))
+
+
+
+ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, group= mes), size = 2) + 
+  geom_point(aes(color = mes)) +
+  labs(title = "Difference in Voter Turnout\nby Region (April vs. November 2019)",
        x = "",
        y = "") +
+  guides(col= guide_legend(title= "Election")) +
+  scale_color_manual(labels = c("April 2019", "November 2019"), values = c("blue", "red")) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1),
+                     limits = c(45, NA),
+                     breaks = seq(45, 80, by = 5),) +
+   geom_segment(data = data_00, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_01, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_02, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_03, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_04, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_05, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_06, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_07, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_08, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_09, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_10, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_11, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_12, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_13, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_14, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_15, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_16, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_17, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_18, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_19, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_text(data = election_data_clean_lollipop_dif,
+            aes(label = sprintf("%.2f%%", difference),
+                x = voter_turnout, 
+                y = codigo_ccaa),
+            vjust = 0.4,
+            hjust = 1.1,
+            size = 3, 
+            color = "black") +
   theme_minimal() +
-  geom_text(aes(label = sprintf("%.2f%%", voter_turnout)),
-            position = position_dodge(width = 0.5),
-            hjust = -0.2, vjust = 0.5, size = 3) +
-  scale_y_discrete(labels=c("00" = "Spain",
+  scale_y_discrete(labels=c("00" = "Average in Spain",
                             "01"="Andalucia",
                             "02"="Aragon",
                             "03"="Asturias",
@@ -623,10 +715,6 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa)) +
                             "18"="Ceuta",
                             "19"="Melilla")) + 
   theme(plot.margin = margin(5, 10, 5, -8))
-
-# my attempt at changing y-axis label color (in theme command)
-
-axis.text.y = element_text(color = c(ifelse(election_data_clean_lollipop$codigo_ccaa == "00", "red", "black")))
 ```
 
 ### Election winners map (Frederick)
