@@ -29,6 +29,8 @@ editor_options:
 ```{r}
 rm(list = ls())
 library(tidyverse)
+library(lubridate)
+library(forcats)
 ```
 
 ## Group task
@@ -234,7 +236,7 @@ abbrev |>
 
 ## Survey data
 
-### Data cleaning and tidy 
+### Data cleaning and tidy
 
 -   You will have to discard mandatory polls that:
 
@@ -328,7 +330,12 @@ election_data_clean_red <- election_data_clean |>
 
 ### Joining abbrev_collect
 
+(Frederick) Joined the two tables (non-reduced) for the Map visualization
+
 ```{r}
+election_data_clean_abbrev <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
 election_data_clean_red <- election_data_clean_red |> 
   left_join(abbrev_collect, by = c("party"= "denominacion"))
 
@@ -452,4 +459,146 @@ survey_elec_sample|>
   distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
   arrange(date_elec)
   
+```
+
+## Free questions
+
+### Vote transfers (Mika)
+
+Election data
+
+```{r}
+
+```
+
+### Voter turnout (Frederick)
+
+-   per election / per election or autonomic community (ccaa)
+
+-   lollipop chart
+
+For each community voter turnouts are calculated.
+
+```{r}
+# Voter turnout regions
+election_data_clean_lollipop <-
+  election_data_clean |> 
+  filter(date_elec == "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos) |> 
+  select(-votos_blancos, -votos_candidaturas) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  distinct(municipio_id, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo) |> 
+  group_by(codigo_ccaa) |> 
+  summarise(votes_sum = sum(votes_casted),
+            population_sum = sum(censo) ) |> 
+  ungroup() |> 
+  mutate(voter_turnout = (votes_sum / population_sum) * 100) 
+
+# Voter turnout Spain
+
+election_data_clean_lollipop_avg <-
+  election_data_clean |> 
+  filter(date_elec == "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos) |> 
+  select(-votos_blancos, -votos_candidaturas) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  distinct(municipio_id, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo) |> 
+  summarise(votes_sum = sum(votes_casted),
+            population_sum = sum(censo) ) |>
+  mutate(voter_turnout = (votes_sum / population_sum) * 100)
+
+election_data_clean_lollipop_avg$codigo_ccaa <- "00"
+
+
+election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election_data_clean_lollipop_avg)
+
+# ordering regions by voter turnout
+order_by_voter_turnout <- election_data_clean_lollipop %>%
+  arrange(voter_turnout) |> 
+  pull(codigo_ccaa)
+
+election_data_clean_lollipop$codigo_ccaa <- factor(election_data_clean_lollipop$codigo_ccaa, levels = fct_relevel(order_by_voter_turnout))
+```
+
+Creating the lollipop graph
+
+```{r}
+ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa)) + 
+  geom_segment(aes(xend = 0, yend = codigo_ccaa), color = "black") +
+  geom_point(position = position_dodge2(width = 0.5), color = "black", size = 2) +
+  geom_point(data = filter(election_data_clean_lollipop, codigo_ccaa == "00"),
+             aes(x = voter_turnout, y = codigo_ccaa),
+             color = "red", size = 3) +
+   geom_segment(data = filter(election_data_clean_lollipop, codigo_ccaa == "00"),
+               aes(x = voter_turnout, y = codigo_ccaa, xend = 0, yend = codigo_ccaa),
+               color = "red") + 
+  scale_x_continuous(expand =expansion(mult = c(0, .08)),
+                     breaks = seq(0, 100, by = 10)) +
+  labs(title = "Voter Turnout by Region (April 2019)",
+       x = "",
+       y = "") +
+  theme_minimal() +
+  geom_text(aes(label = sprintf("%.2f%%", voter_turnout)),
+            position = position_dodge(width = 0.5),
+            hjust = -0.2, vjust = 0.5, size = 3) +
+  scale_y_discrete(labels=c("00" = "Spain",
+                            "01"="Andalucia",
+                            "02"="Aragon",
+                            "03"="Asturias",
+                            "04"="Baleares",
+                            "05"="Cantabria",
+                            "06"="Castilla La Mancha",
+                            "07"="Castilla Leon",
+                            "08"="Cataluna",
+                            "09"="Canarias",
+                            "10"="Extremadura",
+                            "11"="Galicia",
+                            "12"="Madrid",
+                            "13"="Murcia",
+                            "14"="Navarra",
+                            "15"="Comunidad Valenciana",
+                            "16"="Pais Vasco",
+                            "17"="La Rioja",
+                            "18"="Ceuta",
+                            "19"="Melilla")) + 
+  theme(plot.margin = margin(5, 10, 5, -8))
+
+# my attempt at changing y-axis label color (in theme command)
+
+axis.text.y = element_text(color = c(ifelse(election_data_clean_lollipop$codigo_ccaa == "00", "red", "black")))
+```
+
+### Election winners map (Frederick)
+
+Getting the data for first 2019 election
+
+```{r}
+
+election_data_clean_red_winner_2019_a <- election_data_clean_abbrev |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  filter(date_elec == "2019-04-01") |> 
+  drop_na(votes) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(date_elec, municipio_id) |> 
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |> ungroup() |> 
+  slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
+  select(municipio_id, vote_share, party_collect, party)
+
+
+test <- election_data_clean_red_winner_2019_a |> 
+  filter(is.na(party_collect))
+```
+
+\
+
+```{r}
+
+```
+
+### Network analysis (Mika)
+
+```{r}
+
 ```
