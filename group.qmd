@@ -169,35 +169,63 @@ In addition to what you see fit to execute, the following items are mandatory:
 
 Remember that the real goal is to demonstrate a mastery of the tools seen throughout the course. And that happens not only by the quantity of them used but also by the quality when executing them.
 
-# Nienke
+## Election_data
+
+### Data cleaning and tidy data
+
+```{r}
+election_data_clean <- election_data |> 
+  pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
+               names_to = "party",
+               values_to = "votes")
+  
+
+election_data_clean<-election_data_clean|> 
+  mutate(date_elec = make_date(anno, mes)) |> 
+  select(-tipo_eleccion, -codigo_distrito_electoral) |> 
+  mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
+
+
+#red datasets are needed by NIenke- do not change
+election_data_clean_red <- election_data_clean |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  filter(year(date_elec) >= 2018) |> 
+  drop_na(votes)
+```
+
 
 ## Abbrev data
 
 ```{r}
+distinct_parties <- election_data_clean |>  
+  distinct(party)
 
 # Combine datasets as there are parties in election_data not present in 
 abbrev_test <- abbrev |> 
-  full_join(distinct_parties, by = c("denominacion" = "party")) |> 
-  filter(is.na(siglas))
-
+  full_join(distinct_parties, by = c("denominacion" = "party")) 
 
 #Creating a new column with the collected parties
- abbrev_collect<-abbrev |> 
+ abbrev_collect<-abbrev_test |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
-      str_detect(siglas, "psoe") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
+      str_detect(siglas, "psoe") |
+    str_detect(denominacion, "PARTIDO SOCIALISTA") |
+    str_detect(denominacion, "PSOE") |
+    str_detect(denominacion, "P.S.O.E.") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
     
-    str_detect(siglas, "PP") ~ "PP", # PARTIDO POPULAR
+    str_detect(denominacion, "CONVERGENCIA I UNIO") ~ "CU", # CONVERGÈNCIA I UNIÓ
     
+    str_detect(siglas, "PP") |
+    str_detect(denominacion, "PARTIDO POPULAR")  ~ "PP", # PARTIDO POPULAR
     
+
     str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
     
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
-      str_detect(denominacion, "EZKER") |
       str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
     
     str_detect(denominacion, "BILDU")|
@@ -209,22 +237,28 @@ abbrev_test <- abbrev |>
       
       str_detect(denominacion, "VASCO") ~ "PNV", # PARTIDO NACIONALISTA VASCO
     
-      str_detect(denominacion, "UNIO") ~ "CU", # CONVERGÈNCIA I UNIÓ
     
-      str_detect(siglas, "BNG") ~ "BNG", # BLOQUE NACIONALISTA GALLEGO
+      str_detect(siglas, "BNG") |
+      str_detect(denominacion, "GALLEG") |
+      str_detect(denominacion, "GALICIA") |
+      str_detect(denominacion, "GALEGUISTA")|
+      str_detect(denominacion, "GALEG") |
+      str_detect(denominacion, "GALIZ") ~ "BNG", # BLOQUE NACIONALISTA GALLEGO
     
       str_detect(siglas, "VOX") ~ "VOX", # VOX
     
       str_detect(siglas, "PAÍS") ~ "MP", # MÁS PAÍS
     
-      str_detect(siglas, "COMPROMÍS") ~ "CP", # COMPROMÍS
+      str_detect(siglas, "COMPROMÍS")  ~ "CP", # COMPROMÍS
     
       str_detect(siglas, "ERC") |
-      str_detect(denominacion, "esquerra") ~ "ERC", # ESQUERRA REPUBLICANA DE CATALUNYA
+      str_detect(denominacion, "CATALUNYA SÍ") ~ "ERC", # ESQUERRA REPUBLICANA DE CATALUNYA
     
     TRUE ~ "OTHER"))|> 
     distinct(denominacion, .keep_all = TRUE) 
  
+ test <- abbrev_collect |> 
+   filter(is.na(siglas))
 
  national_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
  
@@ -313,51 +347,19 @@ survey_clean_collect_red <- survey_clean_collect_red |>
 
 ```
 
-## Election_data
-
-### Data cleaning and tidy data
-
-```{r}
-election_data_clean <- election_data |> 
-  pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
-               names_to = "party",
-               values_to = "votes")
-
-election_data_clean <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party" = "denominacion")) #many parties not found in 
-
-test <- election_data_clean |> 
-  filter(is.na(party_collect)) |> 
-  distinct(party) |> 
-  
-
-abbrev_collect |> 
-  distinct(denominacion)
-
-election_data_clean<-election_data_clean|> 
-  mutate(date_elec = make_date(anno, mes)) |> 
-  select(-tipo_eleccion, -codigo_distrito_electoral, -siglas) |> 
-  mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
-
-
-#red datasets are needed by NIenke- do not change
-election_data_clean_red <- election_data_clean |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
-  filter(year(date_elec) >= 2018) |> 
-  drop_na(votes)
-```
 
 ### Alex- Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
 Compare total number of votes of the national parties (PSOE, PP, VOX, CS, MP, UP - IU) against the other parties of focus (
 
 ```{r}
-#data set I need for my question
-election_data_clean_1 <- election_data_clean |> 
-  select(-(anno:votos_candidaturas))
-  
-  
+election_data_clean <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
 
+#data set I need for my question
+election_data_clean_1 <-  election_data_clean |> 
+  select(-(anno:votos_candidaturas)) 
+            
 #slicing the sample to make the code and then will run it when its all done
 election_data_sample <- election_data_clean_1 |> 
   slice_sample(prop =0.10)
@@ -365,7 +367,7 @@ election_data_sample <- election_data_clean_1 |>
 national_parties
 regional_nationalist_parties
 
-election_votes_sample <-election_data_sample |>
+election_data_sample <-election_data_sample |>
   group_by(date_elec, party_collect) |> 
   mutate(party_type =
            case_when(party_collect %in% c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU") ~ "national",
@@ -373,8 +375,31 @@ election_votes_sample <-election_data_sample |>
   mutate(sum_votes = sum(votes)) |> 
   ungroup() 
 
-election_votes_sample <- election_votes_sample |> 
+  
+#Summing the total votes per party per election
+election_data_sample <- election_data_sample |> 
+  group_by(date_elec, party_type) |> 
+  mutate(votes_elec_party = sum(votes)) |> 
+  ungroup() 
+ 
+#Summing the total votes voted per election
+election_data_sample <- election_data_sample |> 
+   group_by(date_elec) |> 
+   mutate(votes_elec_total = sum(votes)) |> 
+   ungroup()
+ 
+#Computing a percentage of how many votes a party received compared to the total votes voted
+election_data_sample <- election_data_sample |> 
+   mutate(votes_elec_party_perc = (votes_elec_party/votes_elec_total)*100)
+
+#creating new dataset to visualize the relationship between the share of national parties and regional/ nationalist parties
+graph_data <- election_data_sample |> 
   group_by(date_elec) |> 
+  distinct(party_type, votes_elec_party_perc) 
+
+plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_party_perc, color = party_type, group = party_type)) +
+          geom_line()
+  
   
 ```
 
