@@ -421,7 +421,7 @@ order_by_voter_turnout <- election_data_clean_lollipop %>%
 election_data_clean_lollipop$codigo_ccaa <- factor(election_data_clean_lollipop$codigo_ccaa, levels = fct_relevel(order_by_voter_turnout))
 ```
 
-Creating the graph
+Creating the lollipop graph
 
 ```{r}
 ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa)) + 
