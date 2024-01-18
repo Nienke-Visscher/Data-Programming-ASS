@@ -7,7 +7,7 @@ format:
     toc: true
     toc-location: right
     toc-title: Índice
-editor: visual
+editor: visual 
 editor_options: 
   chunk_output_type: console
 ---
@@ -29,6 +29,8 @@ editor_options:
 ```{r}
 rm(list = ls())
 library(tidyverse)
+library(lubridate)
+library(forcats)
 ```
 
 ## Group task
@@ -171,30 +173,47 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
 ## Abbrev data
 
 ```{r}
-
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
-      str_detect(siglas, "psoe") ~ "PSOE",
-    str_detect(denominacion, "CIUDADANOS") ~ "CIUDADANOS",
+      str_detect(siglas, "psoe") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
+    
+    str_detect(siglas, "PP") ~ "PP", # PARTIDO POPULAR
+    
+    
+    str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
+    
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
-      str_detect(denominacion, "EZKER") ~ "UNIDAS_PODEMOS",
+      str_detect(denominacion, "EZKER") |
+      str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
+    
     str_detect(denominacion, "BILDU")|
       str_detect(siglas, "EH")|
       str_detect(denominacion, "SORTU")|
       str_detect(denominacion, "ALKARTASUNA")|
       str_detect(denominacion, "ARALAR") |
-      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU",
-    TRUE ~ siglas))|> 
-  distinct(denominacion, .keep_all = TRUE) 
+      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU", # EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
+      
+      str_detect(denominacion, "VASCO") ~ "P_N_VASCO", # PARTIDO NACIONALISTA VASCO
+      str_detect(denominacion, "UNIO") ~ "CONV_UNIO", # CONVERGÈNCIA I UNIÓ
+      str_detect(siglas, "BNG") ~ "B_N_GALLEGO", # BLOQUE NACIONALISTA GALLEGO
+      str_detect(siglas, "VOX") ~ "VOX", # VOX
+      str_detect(siglas, "PAÍS") ~ "MP", # MÁS PAÍS
+      str_detect(siglas, "COMPROMÍS") ~ "MAS_PAIS", # COMPROMÍS
+      str_detect(siglas, "ERC") |
+      str_detect(denominacion, "esquerra") ~ "ERC", # ESQUERRA REPUBLICANA DE CATALUNYA
+    
+    TRUE ~ "OTHER"))|> 
+    distinct(denominacion, .keep_all = TRUE) 
 
+ right_wing_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
  
- #Use code below to check the actual party names and abreviations
+#JUST TO CHECK-- Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
 abbrev |> 
 filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
@@ -217,7 +236,7 @@ abbrev |>
 
 ## Survey data
 
-### Data cleaning and tidy data
+### Data cleaning and tidy
 
 -   You will have to discard mandatory polls that:
 
@@ -249,9 +268,16 @@ survey_clean_collect<-survey_clean |>
   left_join(abbrev_collect, by = c("party" = "siglas")) |> 
   mutate(party_collect = 
            case_when(party_collect == "PSOE" ~ "PSOE",
-                     party_collect == "CIUDADANOS" ~ "CIUDADANOS",
-                     party_collect == "UNIDAS_PODEMOS" ~ "UNIDAS_PODEMOS",
+                     party_collect == "CS" ~ "CS",
+                     party_collect == "UP_IU" ~ "UP_IU",
                      party_collect == "EH_BILDU" ~ "EH_BILDU",
+                     party_collect == "P_N_VASCO" ~"P_N_VASCO",
+                     party_collect == "CONV_UNIO" ~ "CONV_UNIO",
+                     party_collect == "B_N_GALLEGO" ~ "B_N_GALLEGO",
+                     party_collect == "VOX" ~ "VOX",
+                     party_collect == "MP" ~ "MP",
+                     party_collect == "MAS_PAIS" ~ "MAS_PAIS",
+                     party_collect == "ERC" ~ "ERC",
                      TRUE ~ party)) |> 
   select(-party)
 
@@ -297,9 +323,26 @@ election_data_clean_red <- election_data_clean |>
   
 ```
 
-### Joining abbrev_collect
+### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+
+### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+
+### Which party was the second when the first was the PSOE? And when the first was the PP?
 
 ```{r}
+
+```
+
+### Who benefits from low turnout?
+
+### Joining abbrev_collect
+
+(Frederick) Joined the two tables (non-reduced) for the Map visualization
+
+```{r}
+election_data_clean_abbrev <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
 election_data_clean_red <- election_data_clean_red |> 
   left_join(abbrev_collect, by = c("party"= "denominacion"))
 
@@ -423,4 +466,146 @@ survey_elec_sample|>
   distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
   arrange(date_elec)
   
+```
+
+## Free questions
+
+### Vote transfers (Mika)
+
+Election data
+
+```{r}
+
+```
+
+### Voter turnout (Frederick)
+
+-   per election / per election or autonomic community (ccaa)
+
+-   lollipop chart
+
+For each community voter turnouts are calculated.
+
+```{r}
+# Voter turnout regions
+election_data_clean_lollipop <-
+  election_data_clean |> 
+  filter(date_elec == "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos) |> 
+  select(-votos_blancos, -votos_candidaturas) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  distinct(municipio_id, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo) |> 
+  group_by(codigo_ccaa) |> 
+  summarise(votes_sum = sum(votes_casted),
+            population_sum = sum(censo) ) |> 
+  ungroup() |> 
+  mutate(voter_turnout = (votes_sum / population_sum) * 100) 
+
+# Voter turnout Spain
+
+election_data_clean_lollipop_avg <-
+  election_data_clean |> 
+  filter(date_elec == "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos) |> 
+  select(-votos_blancos, -votos_candidaturas) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  distinct(municipio_id, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo) |> 
+  summarise(votes_sum = sum(votes_casted),
+            population_sum = sum(censo) ) |>
+  mutate(voter_turnout = (votes_sum / population_sum) * 100)
+
+election_data_clean_lollipop_avg$codigo_ccaa <- "00"
+
+
+election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election_data_clean_lollipop_avg)
+
+# ordering regions by voter turnout
+order_by_voter_turnout <- election_data_clean_lollipop %>%
+  arrange(voter_turnout) |> 
+  pull(codigo_ccaa)
+
+election_data_clean_lollipop$codigo_ccaa <- factor(election_data_clean_lollipop$codigo_ccaa, levels = fct_relevel(order_by_voter_turnout))
+```
+
+Creating the lollipop graph
+
+```{r}
+ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa)) + 
+  geom_segment(aes(xend = 0, yend = codigo_ccaa), color = "black") +
+  geom_point(position = position_dodge2(width = 0.5), color = "black", size = 2) +
+  geom_point(data = filter(election_data_clean_lollipop, codigo_ccaa == "00"),
+             aes(x = voter_turnout, y = codigo_ccaa),
+             color = "red", size = 3) +
+   geom_segment(data = filter(election_data_clean_lollipop, codigo_ccaa == "00"),
+               aes(x = voter_turnout, y = codigo_ccaa, xend = 0, yend = codigo_ccaa),
+               color = "red") + 
+  scale_x_continuous(expand =expansion(mult = c(0, .08)),
+                     breaks = seq(0, 100, by = 10)) +
+  labs(title = "Voter Turnout by Region (April 2019)",
+       x = "",
+       y = "") +
+  theme_minimal() +
+  geom_text(aes(label = sprintf("%.2f%%", voter_turnout)),
+            position = position_dodge(width = 0.5),
+            hjust = -0.2, vjust = 0.5, size = 3) +
+  scale_y_discrete(labels=c("00" = "Spain",
+                            "01"="Andalucia",
+                            "02"="Aragon",
+                            "03"="Asturias",
+                            "04"="Baleares",
+                            "05"="Cantabria",
+                            "06"="Castilla La Mancha",
+                            "07"="Castilla Leon",
+                            "08"="Cataluna",
+                            "09"="Canarias",
+                            "10"="Extremadura",
+                            "11"="Galicia",
+                            "12"="Madrid",
+                            "13"="Murcia",
+                            "14"="Navarra",
+                            "15"="Comunidad Valenciana",
+                            "16"="Pais Vasco",
+                            "17"="La Rioja",
+                            "18"="Ceuta",
+                            "19"="Melilla")) + 
+  theme(plot.margin = margin(5, 10, 5, -8))
+
+# my attempt at changing y-axis label color (in theme command)
+
+axis.text.y = element_text(color = c(ifelse(election_data_clean_lollipop$codigo_ccaa == "00", "red", "black")))
+```
+
+### Election winners map (Frederick)
+
+Getting the data for first 2019 election
+
+```{r}
+
+election_data_clean_red_winner_2019_a <- election_data_clean_abbrev |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  filter(date_elec == "2019-04-01") |> 
+  drop_na(votes) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(date_elec, municipio_id) |> 
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |> ungroup() |> 
+  slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
+  select(municipio_id, vote_share, party_collect, party)
+
+
+test <- election_data_clean_red_winner_2019_a |> 
+  filter(is.na(party_collect))
+```
+
+\
+
+```{r}
+
+```
+
+### Network analysis (Mika)
+
+```{r}
+
 ```
