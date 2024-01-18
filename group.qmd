@@ -175,9 +175,9 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
 ```{r}
 
 # Combine datasets as there are parties in election_data not present in 
-abbrev_test <- abbrev |> 
-  full_join(distinct_parties, by = c("denominacion" = "party")) |> 
-  filter(is.na(siglas))
+#abbrev_test <- abbrev |> 
+  #full_join(distinct_parties, by = c("denominacion" = "party")) |> 
+  #filter(is.na(siglas))
 
 
 #Creating a new column with the collected parties
@@ -327,7 +327,7 @@ election_data_clean <- election_data_clean |>
 
 test <- election_data_clean |> 
   filter(is.na(party_collect)) |> 
-  distinct(party) |> 
+  distinct(party) 
   
 
 abbrev_collect |> 
@@ -650,11 +650,55 @@ test <- election_data_clean_red_winner_2019_a |>
   filter(is.na(party_collect))
 ```
 
-\
+### Vote transfers
 
 ```{r}
+election_data_mika <- 
+  election_data_clean |> 
+  filter(anno == 2019) |> 
+  select(-c(anno, numero_mesas, vuelta, censo, participacion_1, participacion_2))
+
+data_apr<- election_data_mika |> 
+  filter(mes == "04") |> 
+  summarise(votos_apr = sum(votes),
+            .by = party_collect)
+
+data_nov<- election_data_mika |> 
+  filter(mes == "11") |> 
+  summarise(votos_nov = sum(votes),
+            .by = party_collect)
+
+vote_transfers<- data_apr |> 
+  left_join(data_nov, by = "party_collect")
+
 
 ```
+
+```{r}
+library(GGally)
+party_colors <- c("UP_IU"="#8968CD", 
+                    "PSOE"="#CD2626",
+                    "PP"="#0055A4", 
+                    "VOX"="#5ABF35", 
+                    "BAI"="#EECFA1",
+                    "OTHER" = "#999999",
+                    "PNV" = "#008341",
+                    "EH_BILDU" = "#00D0B6",
+                    "CS" = "#FF5001",
+                    "ERC" = "#F0D85D",
+                    "BNG" = "#77B4E0",
+                    "MP" = "#02988B")
+
+vote_transfers |> 
+  ggparcoord(columns = 2:3, 
+             groupColumn = 1, 
+             showPoints = TRUE) +
+  scale_color_manual(values = party_colors)
+
+
+```
+
+
 
 ### Network analysis (Mika)
 
