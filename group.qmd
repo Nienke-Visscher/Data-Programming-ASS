@@ -1,8 +1,4 @@
----
-title: "test hope for best"
-format: html
-editor: visual
----
+
 ---
 title: "Group Task"
 author: "C. Tangana (DNI: 00000000-X), Rosalía (DNI: 00000000-X), ..."
@@ -202,6 +198,7 @@ election_data_clean_red <- election_data_clean |>
 ## Abbrev data
 
 ```{r}
+
 distinct_parties <- election_data_clean |>  
   distinct(party)
 
@@ -215,12 +212,12 @@ abbrev_test <- abbrev |>
   #filter(is.na(siglas))
 
 
-
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev_test |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
+
       str_detect(siglas, "psoe") |
     str_detect(denominacion, "PARTIDO SOCIALISTA") |
     str_detect(denominacion, "PSOE") |
@@ -231,13 +228,14 @@ abbrev_test <- abbrev |>
     str_detect(siglas, "PP") |
     str_detect(denominacion, "PARTIDO POPULAR")  ~ "PP", # PARTIDO POPULAR
     
-
     str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
     
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
+
+      str_detect(denominacion, "EZKER") |
       str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
     
     str_detect(denominacion, "BILDU")|
@@ -247,6 +245,7 @@ abbrev_test <- abbrev |>
       str_detect(denominacion, "ARALAR") |
       str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU", # EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
       
+
       str_detect(denominacion, "VASCO") ~ "PNV", # PARTIDO NACIONALISTA VASCO
     
     
@@ -276,7 +275,7 @@ abbrev_test <- abbrev |>
  
  regional_nationalist_parties <-  c("OTHER", "ERC", "CP", "BNG", "CU", "PNV", "EH_BILDU" )
  
- 
+
 #JUST TO CHECK-- Use code below to check the actual party names and abreviations
 #PARTIDO SOCIALISTA OBRERO ESPAÑOL
 abbrev |> 
@@ -332,9 +331,17 @@ survey_clean_collect<-survey_clean |>
   left_join(abbrev_collect, by = c("party" = "siglas")) |> 
   mutate(party_collect = 
            case_when(party_collect == "PSOE" ~ "PSOE",
-                     party_collect == "CIUDADANOS" ~ "CIUDADANOS",
-                     party_collect == "UNIDAS_PODEMOS" ~ "UNIDAS_PODEMOS",
+                     party_collect == "CS" ~ "CS",
+                     party_collect == "UP_IU" ~ "UP_IU",
                      party_collect == "EH_BILDU" ~ "EH_BILDU",
+                     party_collect == "PP" ~ "PP",
+                     party_collect == "P_N_VASCO" ~"P_N_VASCO",
+                     party_collect == "CONV_UNIO" ~ "CONV_UNIO",
+                     party_collect == "B_N_GALLEGO" ~ "B_N_GALLEGO",
+                     party_collect == "VOX" ~ "VOX",
+                     party_collect == "MP" ~ "MP",
+                     party_collect == "MAS_PAIS" ~ "MAS_PAIS",
+                     party_collect == "ERC" ~ "ERC",
                      TRUE ~ party)) |> 
   select(-party)
 
@@ -356,7 +363,6 @@ Creating an ID to match the election_data table
 ```{r}
 survey_clean_collect_red <- survey_clean_collect_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-
 ```
 
 ## Election_data
@@ -386,9 +392,27 @@ election_data_clean<-election_data_clean|>
   mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
 
 
+
+```
+
+(Frederick) Joined the two tables (non-reduced) for the Map visualization
+
+```{r}
+election_data_clean_abbrev <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
+election_data_clean <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
+```
+
+For last 3 questions
+
+```{r}
 #red datasets are needed by NIenke- do not change
+
 election_data_clean_red <- election_data_clean |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
   filter(year(date_elec) >= 2018) |> 
   drop_na(votes)
 ```
@@ -446,7 +470,10 @@ plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_pa
           geom_line()
   
   
+
 ```
+
+
 
 ### Alex- Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
@@ -460,18 +487,46 @@ plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_pa
 
 ### Joining abbrev_collect
 
-```{r}
-election_data_clean_red <- election_data_clean_red |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
-```
-
-### Creating ID to join tables
 
 ```{r}
 election_data_clean_red <- election_data_clean_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
+
+### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+
+### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+
+```{r}
+election_data_clean_2 <-election_data_clean |> 
+  mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
+   group_by(codigo_ccaa_pro_muni) |>
+  mutate(votes_nul_blanc_total = votos_blancos+ votos_nulos) |> 
+  mutate(votes_municipality = sum(votes)) |> 
+  ungroup() |> 
+  mutate(total_votes_munici = votes_nul_blanc_total + votes_municipality) |>
+  group_by(codigo_ccaa_pro_muni, party_collect) |> 
+  mutate(votes_party_municipality = votes) |> 
+  ungroup() |> 
+  mutate(votes_perc_party_municipality = (votes_party_munici/total_votes_municiplality)*100) |> 
+  filter(censo >100000) |> 
+  group_by(codigo_ccaa_pro_muni) |> 
+  mutate(winner_municipality =max(votes_perc_party_municipality)) |> 
+  ungroup()
+    
+    
+  
+```
+
+### Which party was the second when the first was the PSOE? And when the first was the PP?
+
+```{r}
+
+```
+
+### Who benefits from low turnout?
+
+### Joining abbrev_collect
 
 ## Joining survey and election data
 
@@ -495,9 +550,9 @@ survey_elec_sample <- survey_elec |>
   slice_sample(prop =0.10)
 
 #Checking for duplicates -> many duplicates
-duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
+#duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
 
-#Only keeping 1 of the duplicate rows
+#Only keeping 1 of the duplicate rows !!! Check problem with municipality dplicates
 survey_elec_sample<-survey_elec_sample |> 
   filter(!duplicated(survey_elec_sample))  
 
@@ -513,10 +568,13 @@ survey_elec_sample<-survey_elec_sample |>
   mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
-#Summing the total votes voted per election
+#Summing the total votes voted per election #FIXXX
 survey_elec_sample<-survey_elec_sample |> 
+   group_by(codigo_ccaa_pro_muni, date_elec)
+   mutate(votes_total_blancos_nulos = votos_blancos + votos_nulos) |>
+   ungroup() |> 
    group_by(date_elec) |> 
-   mutate(votes_elec_total = sum(votes)) |> 
+   mutate(votes_elec_total = sum(votes_total)) |> 
    ungroup()
  
 #Computing a percentage of how many votes a party received compared to the total votes voted
@@ -544,14 +602,13 @@ survey_elec_sample<-survey_elec_sample |>
 
 ### How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 
-CS = CUIDANOS, IU = UNIDAS_PODEMOS
-
-Problem: There is no data on CIUDANOS, UNIDAS_PODEMOS and MP
+Problem: "UP_IU"
 
 ```{r}
+
 #Computing the average polling error per party per election
 survey_elec_national_sample<-survey_elec_sample |> 
-  filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CIUDADANOS "|party_collect =="MP"|party_collect =="UNIDAS_PODEMOS") |> 
+  filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CS "|party_collect =="MP"|party_collect =="UP_IU") |> 
   group_by(date_elec, party_collect) |> 
   mutate(avg_diff_poll = sqrt(mean(diff_vote_int_2, na.rm = TRUE)) ) |> 
   ungroup() 
@@ -608,6 +665,7 @@ For each community voter turnouts are calculated.
 # Voter turnout regions
 election_data_clean_lollipop <-
   election_data_clean |> 
+
   filter(date_elec >= "2019-04-01") |> 
   mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
   select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
@@ -615,6 +673,7 @@ election_data_clean_lollipop <-
   distinct(municipio_id, mes, .keep_all = T) |> 
   select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |> 
   group_by(codigo_ccaa, mes) |> 
+
   summarise(votes_sum = sum(votes_casted),
             population_sum = sum(censo) ) |> 
   ungroup() |> 
@@ -624,6 +683,7 @@ election_data_clean_lollipop <-
 
 election_data_clean_lollipop_avg <-
   election_data_clean |> 
+
   filter(date_elec >= "2019-04-01") |> 
   mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
   select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
@@ -631,6 +691,7 @@ election_data_clean_lollipop_avg <-
   distinct(municipio_id, mes, .keep_all = T) |> 
   select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |>
   group_by(mes) |> 
+
   summarise(votes_sum = sum(votes_casted),
             population_sum = sum(censo) ) |>
   mutate(voter_turnout = (votes_sum / population_sum) * 100)
@@ -639,6 +700,7 @@ election_data_clean_lollipop_avg$codigo_ccaa <- "00"
 
 
 election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election_data_clean_lollipop_avg)
+
 ```
 
 Data manipulation for differences and factorising 'codigo_ccaa'
@@ -667,11 +729,13 @@ election_data_clean_lollipop$codigo_ccaa <- factor(
   election_data_clean_lollipop$codigo_ccaa,
   levels = order_by_max_turnout
 )
+
 ```
 
 Creating the lollipop graph
 
 ```{r}
+
 # for segments
 data_00 <- election_data_clean_lollipop |> 
   filter(codigo_ccaa == "00")
@@ -761,6 +825,7 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
             color = "black") +
   theme_minimal() +
   scale_y_discrete(labels=c("00" = "Average in Spain",
+
                             "01"="Andalucia",
                             "02"="Aragon",
                             "03"="Asturias",
@@ -781,6 +846,9 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
                             "18"="Ceuta",
                             "19"="Melilla")) + 
   theme(plot.margin = margin(5, 10, 5, -8))
+
+
+
 ```
 
 ### Election winners map (Frederick)
@@ -803,6 +871,7 @@ election_data_clean_red_winner_2019_a <- election_data_clean_abbrev |>
 test <- election_data_clean_red_winner_2019_a |> 
   filter(is.na(party_collect))
 ```
+
 
 ### Vote transfers
 
