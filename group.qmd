@@ -215,7 +215,6 @@ abbrev_test <- abbrev |>
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
-
       str_detect(siglas, "psoe") |
     str_detect(denominacion, "PARTIDO SOCIALISTA") |
     str_detect(denominacion, "PSOE") |
@@ -232,7 +231,6 @@ abbrev_test <- abbrev |>
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
-
       str_detect(denominacion, "EZKER") |
       str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
     
@@ -273,26 +271,6 @@ abbrev_test <- abbrev |>
  
  regional_nationalist_parties <-  c("OTHER", "ERC", "CP", "BNG", "CU", "PNV", "EH_BILDU" )
  
-
-#JUST TO CHECK-- Use code below to check the actual party names and abreviations
-#PARTIDO SOCIALISTA OBRERO ESPAÑOL
-abbrev |> 
-filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
-
-#CIUDADANOS
-abbrev |> 
-  filter(str_detect(denominacion, "CIUDADANOS"))
-
-#UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
-abbrev |> 
-  filter(str_detect(denominacion, "UNIDAS")|str_detect(siglas, "PODEMOS")|str_detect(denominacion, "VERDES")|str_detect(denominacion, "PODEM")|str_detect(denominacion, "EZKER")) |> 
-  print(n=100)
-
-#EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
-abbrev |> 
-  filter(str_detect(denominacion, "BILDU")|str_detect(siglas, "EH")|str_detect(denominacion, "SORTU")|str_detect(denominacion, "ALKARTASUNA")|str_detect(denominacion, "ARALAR") |str_detect(denominacion, "ALTERNATIBA")) |> 
-  print(n=100)
-
 ```
 
 ## Survey data
@@ -333,13 +311,13 @@ survey_clean_collect<-survey_clean |>
                      party_collect == "UP_IU" ~ "UP_IU",
                      party_collect == "EH_BILDU" ~ "EH_BILDU",
                      party_collect == "PP" ~ "PP",
-                     party_collect == "P_N_VASCO" ~"P_N_VASCO",
-                     party_collect == "CONV_UNIO" ~ "CONV_UNIO",
-                     party_collect == "B_N_GALLEGO" ~ "B_N_GALLEGO",
+                     party_collect == "PNV" ~"PNV",
+                     party_collect == "BNG" ~ "BNG",
                      party_collect == "VOX" ~ "VOX",
                      party_collect == "MP" ~ "MP",
-                     party_collect == "MAS_PAIS" ~ "MAS_PAIS",
+                     party_collect == "CP" ~ "CP",
                      party_collect == "ERC" ~ "ERC",
+                     party_collect == "CU" ~ "CU",
                      TRUE ~ party)) |> 
   select(-party)
 
@@ -386,7 +364,7 @@ abbrev_collect |>
 
 election_data_clean<-election_data_clean|> 
   mutate(date_elec = make_date(anno, mes)) |> 
-  select(-tipo_eleccion, -codigo_distrito_electoral, -siglas) |> 
+  select(-tipo_eleccion, -codigo_distrito_electoral) |> 
   mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
 
 
@@ -402,6 +380,13 @@ election_data_clean_abbrev <- election_data_clean |>
 election_data_clean <- election_data_clean |> 
   left_join(abbrev_collect, by = c("party"= "denominacion"))
 
+```
+
+### Joining abbrev_collect
+
+```{r}
+election_data_clean <- election_data_clean |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
 For last 3 questions
@@ -467,6 +452,7 @@ graph_data <- election_data_sample |>
 plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_party_perc, color = party_type, group = party_type)) +
           geom_line()
   
+
   
 
 ```
@@ -480,13 +466,6 @@ plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_pa
 ```
 
 ### Who benefits from low turnout?
-
-### Joining abbrev_collect
-
-```{r}
-election_data_clean_red <- election_data_clean_red |> 
-  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-```
 
 ### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
