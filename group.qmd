@@ -1,11 +1,6 @@
 ---
-title: "test hope for best"
-format: html
-editor: visual
----
----
 title: "Group Task"
-author: "C. Tangana (DNI: 00000000-X), Rosalía (DNI: 00000000-X), ..."
+author: "Alexandra Salo (Student ID: 100508332), Rosalía (DNI: 00000000-X), ..."
 format:
   html:
     theme: [style.scss]
@@ -16,16 +11,6 @@ editor: visual
 editor_options: 
   chunk_output_type: console
 ---
-
-## Instructions (read before starting)
-
--   Modify within the `.qmd` document your personal data (names and ID) located in the header of the file.
-
--   Make sure, **BEFORE further editing** the document, that the `.qmd` file is rendered correctly and the corresponding `.html` is generated in your local folder on your computer.
-
--   The chunks (code boxes) created are either empty or incomplete. Once you edit what you consider, you must change each chunk to `#| eval: true` (or remove it directly) for them to run.
-
--   Remember that you can run chunk by chunk with the *play* button or run all chunks up to a given chunk (with the button to the left of the previous one).
 
 ### Required packages
 
@@ -370,19 +355,18 @@ election_data_clean <- election_data |>
                values_to = "votes")
 
 election_data_clean <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party" = "denominacion")) #many parties not found in 
+  left_join(abbrev_collect, by = c("party" = "denominacion")) #many parties in the elections dataset not found in abbrev
 
-test <- election_data_clean |> 
-  filter(is.na(party_collect)) |> 
-  distinct(party) 
+#just to test to see if I've gotten all of the party_collect variable correctly
+#test <- election_data_clean |> 
+  #filter(is.na(party_collect)) |> 
+  #distinct(party) 
   
 
-abbrev_collect |> 
-  distinct(denominacion)
-
+#removing variables, changing NA votes to 0
 election_data_clean<-election_data_clean|> 
   mutate(date_elec = make_date(anno, mes)) |> 
-  select(-tipo_eleccion, -codigo_distrito_electoral, -siglas) |> 
+  select(-tipo_eleccion, -codigo_distrito_electoral) |> 
   mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
 
 
@@ -395,24 +379,21 @@ election_data_clean_red <- election_data_clean |>
 
 ### Alex- Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
-Compare total number of votes of the national parties (PSOE, PP, VOX, CS, MP, UP - IU) against the other parties of focus (
+Compare total number of votes of the national parties (PSOE, PP, VOX, CS, MP, UP - IU) against the other parties of focus. 
 
 ```{r}
-election_data_clean <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
 #data set I need for my question
 election_data_clean_1 <-  election_data_clean |> 
   select(-(anno:votos_candidaturas)) 
             
 #slicing the sample to make the code and then will run it when its all done
-election_data_sample <- election_data_clean_1 |> 
-  slice_sample(prop =0.10)
+#election_data_sample <- election_data_clean_1 |> 
+  #slice_sample(prop =0.10)
 
 national_parties
 regional_nationalist_parties
 
-election_data_sample <-election_data_sample |>
+election_data_q1 <- election_data_clean_1 |>
   group_by(date_elec, party_collect) |> 
   mutate(party_type =
            case_when(party_collect %in% c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU") ~ "national",
@@ -422,39 +403,108 @@ election_data_sample <-election_data_sample |>
 
   
 #Summing the total votes per party per election
-election_data_sample <- election_data_sample |> 
+election_data_q1 <- election_data_q1 |> 
   group_by(date_elec, party_type) |> 
   mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
 #Summing the total votes voted per election
-election_data_sample <- election_data_sample |> 
+election_data_q1 <- election_data_q1 |> 
    group_by(date_elec) |> 
    mutate(votes_elec_total = sum(votes)) |> 
    ungroup()
  
 #Computing a percentage of how many votes a party received compared to the total votes voted
-election_data_sample <- election_data_sample |> 
+election_data_q1 <- election_data_q1 |> 
    mutate(votes_elec_party_perc = (votes_elec_party/votes_elec_total)*100)
 
 #creating new dataset to visualize the relationship between the share of national parties and regional/ nationalist parties
-graph_data <- election_data_sample |> 
+graph_data <- election_data_q1 |> 
   group_by(date_elec) |> 
   distinct(party_type, votes_elec_party_perc) 
 
-plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_party_perc, color = party_type, group = party_type)) +
-          geom_line()
-  
-  
+plot1 <- ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = party_type, group = party_type)) +
+  geom_line() +
+  scale_y_continuous(breaks = seq(0, 100, by = 10))
+
+
 ```
+In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties. 
 
 ### Alex- Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
-### Which party was the second when the first was the PSOE? And when the first was the PP?
-
 ```{r}
+election_data_clean_2 <-election_data_clean |> 
+  select(-(anno:vuelta)) |> 
+  mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> #code to track each by municipality
+  group_by(codigo_ccaa_pro_muni) |> 
+  mutate(votes_nul_blanc_total = votos_blancos+ votos_nulos) |> #votes that each municipality casted that didnt count
+  mutate(votes_municipality = sum(votes)) |> #votes that each municipality casted for real
+  ungroup() |> 
+  mutate(total_votes_municipality = votes_nul_blanc_total + votes_municipality) |> #total votes casted in each municipality for every row
+  group_by(codigo_ccaa_pro_muni, party_collect) |> 
+  mutate(votes_party_municipality = votes) |> #for each party in each municipality total votes
+  ungroup() |> 
+  mutate(votes_perc_party_municipality = (votes_party_municipality/total_votes_municipality)*100) |> #percentage of votes that a party got from the total amount of votes cast in each municipality
+  ungroup()
+  
+ q2_final_result <- election_data_clean_2 |> 
+   filter(censo > 100000) |> 
+   group_by(date_elec, codigo_ccaa_pro_muni) |> 
+   arrange(desc(votes_perc_party_municipality)) |> 
+   slice(1) |> 
+   ungroup() |> 
+   left_join(cod_mun, by = c("codigo_ccaa_pro_muni" = "cod_mun")) |> 
+   select(date_elec, municipio, party, party_collect,  votes_perc_party_municipality) 
+   
+q2_final_result
 
 ```
+
+### Alex - Q3 Which party was the second when the first was the PSOE? And when the first was the PP?
+
+```{r}
+election_data_q3 <- election_data_clean_2 |> 
+  left_join(cod_mun, by = c("codigo_ccaa_pro_muni" = "cod_mun")) |> 
+  filter(censo > 100000) |> 
+  select(date_elec, party, party_collect, codigo_ccaa_pro_muni, municipio, votes_perc_party_municipality) |> 
+  group_by(date_elec, codigo_ccaa_pro_muni) |> 
+  arrange(desc(votes_perc_party_municipality)) |> 
+  mutate(rank = row_number()) |> 
+  ungroup() 
+
+# Identify dates and municipalities where PSOE won
+psoe_wins <- election_data_q3 |> 
+  filter(party_collect == "PSOE", rank == 1) |> 
+  select(date_elec, codigo_ccaa_pro_muni)
+  
+ # Filter for municipalities where PSOE won and find the parties coming in second place
+parties_2nd_place_after_PSOE <- election_data_q3 |> 
+  semi_join(psoe_wins, by = c("date_elec", "codigo_ccaa_pro_muni")) |> 
+  filter(rank == 2) |> 
+  select(date_elec, municipio, party, party_collect) 
+
+# Identify dates and municipalities where PP won
+PP_wins <- election_data_q3 |> 
+  filter(party_collect == "PP", rank == 1) |> 
+  select(date_elec, codigo_ccaa_pro_muni)
+  
+ # Filter for municipalities where PP won and find the parties coming in second place
+parties_2nd_place_after_PP <- election_data_q3 |> 
+  semi_join(PP_wins, by = c("date_elec", "codigo_ccaa_pro_muni")) |> 
+  filter(rank == 2) |> 
+  select(date_elec, municipio, party, party_collect)   
+
+final_results <- bind_rows(
+  mutate(parties_2nd_place_after_PSOE, source = "PSOE"),
+  mutate(parties_2nd_place_after_PP, source = "PP") 
+) |> 
+  rename(election_winner = source)
+
+final_results
+
+```
+
 
 ### Who benefits from low turnout?
 
@@ -483,7 +533,7 @@ survey_elec <- election_data_clean_red |>
 
 survey_elec<- survey_elec |> 
   mutate(party_collect =party_collect.x) |> 
-  select(-party_collect.y, -party_collect.x) |> 
+  select( -party_collect.x) |> 
   mutate(date_elec = date_elec.x) |> 
   mutate(date_elec_survey = date_elec.y) |> 
   select(-date_elec.x, -date_elec.y) |> 
