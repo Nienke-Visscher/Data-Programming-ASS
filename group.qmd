@@ -183,7 +183,6 @@ election_data_clean_red <- election_data_clean |>
   drop_na(votes)
 ```
 
-
 ## Abbrev data
 
 ```{r}
@@ -459,8 +458,6 @@ plot1 <- ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc,
 ```
 In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties. 
 
-
-
 ### Alex- Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
 ```{r}
@@ -540,7 +537,6 @@ final_results
 
 ### Joining abbrev_collect
 
-
 ```{r}
 election_data_clean_red <- election_data_clean_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
@@ -561,7 +557,7 @@ election_data_clean_2 <-election_data_clean |>
   group_by(codigo_ccaa_pro_muni, party_collect) |> 
   mutate(votes_party_municipality = votes) |> 
   ungroup() |> 
-  mutate(votes_perc_party_municipality = (votes_party_munici/total_votes_municiplality)*100) |> 
+  mutate(votes_perc_party_municipality = (votes_party_municipality/total_votes_munici)*100) |> 
   filter(censo >100000) |> 
   group_by(codigo_ccaa_pro_muni) |> 
   mutate(winner_municipality =max(votes_perc_party_municipality)) |> 
@@ -621,14 +617,15 @@ survey_elec_sample<-survey_elec_sample |>
   mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
-#Summing the total votes voted per election #FIXXX
+#Summing the total votes voted per election 
 survey_elec_sample<-survey_elec_sample |> 
    group_by(codigo_ccaa_pro_muni, date_elec)
    mutate(votes_total_blancos_nulos = votos_blancos + votos_nulos) |>
    ungroup() |> 
    group_by(date_elec) |> 
-   mutate(votes_elec_total = sum(votes_total)) |> 
-   ungroup()
+   mutate(votes_elec = sum(votes_total)) |> 
+   ungroup() |> 
+   mutate(votes_elec_total = votes_total_blancos_nulos + votes_elec)
  
 #Computing a percentage of how many votes a party received compared to the total votes voted
 survey_elec_sample<-survey_elec_sample |> 
@@ -1065,7 +1062,6 @@ ggplot(esp_can) +
   coord_sf() + 
   facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
-
 
 ### Vote transfers
 
