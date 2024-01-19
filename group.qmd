@@ -182,7 +182,6 @@ Remember that the real goal is to demonstrate a mastery of the tools seen throug
     
     str_detect(siglas, "PP") ~ "PP", # PARTIDO POPULAR
     
-    
     str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
     
     str_detect(denominacion, "UNIDAS")|
@@ -271,6 +270,7 @@ survey_clean_collect<-survey_clean |>
                      party_collect == "CS" ~ "CS",
                      party_collect == "UP_IU" ~ "UP_IU",
                      party_collect == "EH_BILDU" ~ "EH_BILDU",
+                     party_collect == "PP" ~ "PP",
                      party_collect == "P_N_VASCO" ~"P_N_VASCO",
                      party_collect == "CONV_UNIO" ~ "CONV_UNIO",
                      party_collect == "B_N_GALLEGO" ~ "B_N_GALLEGO",
@@ -299,7 +299,6 @@ Creating an ID to match the election_data table
 ```{r}
 survey_clean_collect_red <- survey_clean_collect_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-
 ```
 
 ## Election_data
@@ -316,16 +315,63 @@ election_data_clean<-election_data_clean|>
   mutate(date_elec = make_date(anno, mes)) |> 
   select(-tipo_eleccion, -codigo_distrito_electoral)
 
+
+```
+
+(Frederick) Joined the two tables (non-reduced) for the Map visualization
+
+```{r}
+election_data_clean_abbrev <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
+election_data_clean <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
+```
+
+For last 3 questions
+
+```{r}
+
 election_data_clean_red <- election_data_clean |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
   filter(year(date_elec) >= 2018) |> 
   drop_na(votes)
   
+
+```
+
+### Creating ID to join tables
+
+```{r}
+election_data_clean_red <- election_data_clean_red |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
 ### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
 ### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+
+```{r}
+election_data_clean_2 <-election_data_clean |> 
+  mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
+   group_by(codigo_ccaa_pro_muni) |>
+  mutate(votes_nul_blanc_total = votos_blancos+ votos_nulos) |> 
+  mutate(votes_municipality = sum(votes)) |> 
+  ungroup() |> 
+  mutate(total_votes_munici = votes_nul_blanc_total + votes_municipality) |>
+  group_by(codigo_ccaa_pro_muni, party_collect) |> 
+  mutate(votes_party_municipality = votes) |> 
+  ungroup() |> 
+  mutate(votes_perc_party_municipality = (votes_party_munici/total_votes_municiplality)*100) |> 
+  filter(censo >100000) |> 
+  group_by(codigo_ccaa_pro_muni) |> 
+  mutate(winner_municipality =max(votes_perc_party_municipality)) |> 
+  ungroup()
+    
+    
+  
+```
 
 ### Which party was the second when the first was the PSOE? And when the first was the PP?
 
@@ -336,24 +382,6 @@ election_data_clean_red <- election_data_clean |>
 ### Who benefits from low turnout?
 
 ### Joining abbrev_collect
-
-(Frederick) Joined the two tables (non-reduced) for the Map visualization
-
-```{r}
-election_data_clean_abbrev <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
-election_data_clean_red <- election_data_clean_red |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
-```
-
-### Creating ID to join tables
-
-```{r}
-election_data_clean_red <- election_data_clean_red |> 
-  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-```
 
 ## Joining survey and election data
 
@@ -377,9 +405,9 @@ survey_elec_sample <- survey_elec |>
   slice_sample(prop =0.10)
 
 #Checking for duplicates -> many duplicates
-duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
+#duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
 
-#Only keeping 1 of the duplicate rows
+#Only keeping 1 of the duplicate rows !!! Check problem with municipality dplicates
 survey_elec_sample<-survey_elec_sample |> 
   filter(!duplicated(survey_elec_sample))  
 
@@ -395,10 +423,13 @@ survey_elec_sample<-survey_elec_sample |>
   mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
-#Summing the total votes voted per election
+#Summing the total votes voted per election #FIXXX
 survey_elec_sample<-survey_elec_sample |> 
+   group_by(codigo_ccaa_pro_muni, date_elec)
+   mutate(votes_total_blancos_nulos = votos_blancos + votos_nulos) |>
+   ungroup() |> 
    group_by(date_elec) |> 
-   mutate(votes_elec_total = sum(votes)) |> 
+   mutate(votes_elec_total = sum(votes_total)) |> 
    ungroup()
  
 #Computing a percentage of how many votes a party received compared to the total votes voted
@@ -426,14 +457,13 @@ survey_elec_sample<-survey_elec_sample |>
 
 ### How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 
-CS = CUIDANOS, IU = UNIDAS_PODEMOS
-
-Problem: There is no data on CIUDANOS, UNIDAS_PODEMOS and MP
+Problem: "UP_IU"
 
 ```{r}
+
 #Computing the average polling error per party per election
 survey_elec_national_sample<-survey_elec_sample |> 
-  filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CIUDADANOS "|party_collect =="MP"|party_collect =="UNIDAS_PODEMOS") |> 
+  filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CS "|party_collect =="MP"|party_collect =="UP_IU") |> 
   group_by(date_elec, party_collect) |> 
   mutate(avg_diff_poll = sqrt(mean(diff_vote_int_2, na.rm = TRUE)) ) |> 
   ungroup() 
