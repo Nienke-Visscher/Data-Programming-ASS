@@ -453,7 +453,6 @@ plot1 <-  ggplot(data = graph_data, mapping = aes(x= date_elec, y= votes_elec_pa
           geom_line()
   
 
-  
 
 ```
 
