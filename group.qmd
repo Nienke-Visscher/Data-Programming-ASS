@@ -717,25 +717,166 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
   theme(plot.margin = margin(5, 10, 5, -8))
 ```
 
+### 
+
 ### Election winners map (Frederick)
+
+#### Election Winners November 2019
+
+```{r}
+election_data_clean_abbrev <-
+  election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+```
 
 Getting the data for first 2019 election
 
 ```{r}
+election_data_clean_red_winner_2019_b <-
+  election_data_clean_abbrev |>  
+  dplyr::select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |>  
+  filter(date_elec == "2019-11-01") |>  
+  drop_na(votes) |>  
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(date_elec, municipio_id) |>  
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |> 
+  ungroup() |> 
+  dplyr::slice_max(n = 1, vote_share, by = c(municipio_id)) |>  
+  dplyr::select(municipio_id, vote_share, party_collect, party)
+```
 
-election_data_clean_red_winner_2019_a <- election_data_clean_abbrev |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
-  filter(date_elec == "2019-04-01") |> 
-  drop_na(votes) |> 
+```{r}
+
+esp_can <- esp_get_country() 
+can_prov <- esp_get_can_provinces()
+can_box <- esp_get_can_box() 
+munic <- esp_get_munic() 
+# creating province_municipality code  
+
+munic <-    
+  munic |>  
+  mutate(municipio_id = paste(cpro, cmun, sep = "-")) 
+
+# merging based on province_municipality code  
+
+elec_winner_munic_2019b <- munic |> 
+  left_join(election_data_clean_red_winner_2019_b, by = c("municipio_id" = "municipio_id"))  
+
+# 2019 a election winners map  
+# party colors 
+
+party_colors <- c("UP_IU"="#8968CD",  
+                  "PSOE"="#CD2626",
+                  "PP"="#0055A4", 
+                  "VOX"="#5ABF35", 
+                  "BAI"="#EECFA1",
+                  "OTHER" = "#999999", 
+                  "PNV" = "#008341", 
+                  "EH_BILDU" = "#00D0B6", 
+                  "CS" = "#FF5001",      
+                  "ERC" = "#F0D85D",    
+                  "BNG" = "#77B4E0",  
+                  "MP" = "#02988B") 
+
+ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = elec_winner_munic_2019a, aes(fill = party_collect), color = "black", size = 1) + 
+  scale_fill_manual(name = "Party", values = party_colors) + 
+  theme_void() +  
+  labs(title =" Election Winners by Municipality in November 2019") +  
+  theme(legend.position = c(0.18, 0.55),    
+        legend.justification = "center",   
+        legend.background = element_rect(fill = NULL, colour = "black"),
+        legend.margin = margin(6, 6, 6, 6))+ 
+  guides(fill = guide_legend(ncol = 2)) + 
+  coord_sf()
+```
+
+#### Facet
+
+##### All elections since 2008
+
+```{r}
+election_winners <-   
+  election_data_clean_abbrev |>
+  dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  drop_na(votes) |>
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
   group_by(date_elec, municipio_id) |> 
-  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |> ungroup() |> 
-  slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
-  select(municipio_id, vote_share, party_collect, party)
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  ungroup() |> 
+  dplyr::slice_max(n = 1, vote_share, by = c(municipio_id, date_elec)) |>
+  dplyr::select(municipio_id, vote_share, party_collect, party, anno, date_elec)  elec_winners_all_time <- munic |>
+  left_join(election_winners, by = c("municipio_id" = "municipio_id"))
+```
 
+```{r}
 
-test <- election_data_clean_red_winner_2019_a |> 
-  filter(is.na(party_collect))
+election_names <-
+  as_labeller(c(
+    '2008-03-01'="March 2008",
+    '2011-11-01'="November 2011",
+    '2015-12-01'="December 2015",
+    '2016-06-01'="June 2016",
+    '2019-04-01'="April 2019",
+    '2019-11-01'="November 2019"
+    ))  
+
+ggplot(esp_can) +
+  geom_sf() +
+  geom_sf(data = can_prov) + 
+  geom_sf(data = can_box) +
+  geom_sf(data = elec_winners_all_time, aes(fill = party_collect), color = "black", size = 1) +
+  scale_fill_manual(name = "Party", values = party_colors) +
+  theme_void() +
+  labs(title =" Election Winners by Municipality since 2008") +
+  theme(legend.position = "bottom",
+        legend.margin = margin(6, 6, 6, 6))+
+  guides(fill = guide_legend(nrow = 1)) + 
+  coord_sf() +
+  facet_wrap(~date_elec, labeller = as_labeller(election_names))
+```
+
+##### 2019 elections
+
+```{r}
+election_winners_2019 <-
+  election_data_clean_abbrev |> 
+  filter(anno == "2019")|>
+  dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  drop_na(votes) |>
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(date_elec, municipio_id) |> 
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  ungroup() |>
+  dplyr::slice_max(n = 1, vote_share, by = c(municipio_id, date_elec)) |>
+  dplyr::select(municipio_id, vote_share, party_collect, party, anno, date_elec)  
+
+elec_winners_2019 <- 
+  munic |> 
+  left_join(election_winners_2019, by = c("municipio_id" = "municipio_id")) 
+
+election_names <- as_labeller(c(
+  '2019-04-01'="April 2019",
+  '2019-11-01'="November 2019" 
+  )) 
+
+ggplot(esp_can) +
+  geom_sf() + 
+  geom_sf(data = can_prov) +
+  geom_sf(data = can_box) + 
+  geom_sf(data = elec_winners_2019, aes(fill = party_collect), color = "black", size = 1) +
+  scale_fill_manual(name = "Party", values = party_colors) +
+  theme_void() + 
+  labs(title =" Election Winners by Municipality in 2019 elections") +
+  theme(legend.position = "bottom", 
+        legend.margin = margin(6, 6, 6, 6), 
+        legend.justification = "center")+ 
+  guides(fill = guide_legend(nrow = 1)) +
+  coord_sf() + 
+  facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
 
 ### Vote transfers
@@ -785,8 +926,6 @@ vote_transfers |>
 
 
 ```
-
-
 
 ### Network analysis (Mika)
 
