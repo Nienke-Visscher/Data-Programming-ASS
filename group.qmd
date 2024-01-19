@@ -206,8 +206,15 @@ distinct_parties <- election_data_clean |>
   distinct(party)
 
 # Combine datasets as there are parties in election_data not present in 
+
 abbrev_test <- abbrev |> 
   full_join(distinct_parties, by = c("denominacion" = "party")) 
+  
+#abbrev_test <- abbrev |> 
+  #full_join(distinct_parties, by = c("denominacion" = "party")) |> 
+  #filter(is.na(siglas))
+
+
 
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev_test |> 
@@ -352,6 +359,39 @@ survey_clean_collect_red <- survey_clean_collect_red |>
 
 ```
 
+## Election_data
+
+### Data cleaning and tidy data
+
+```{r}
+election_data_clean <- election_data |> 
+  pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
+               names_to = "party",
+               values_to = "votes")
+
+election_data_clean <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party" = "denominacion")) #many parties not found in 
+
+test <- election_data_clean |> 
+  filter(is.na(party_collect)) |> 
+  distinct(party) 
+  
+
+abbrev_collect |> 
+  distinct(denominacion)
+
+election_data_clean<-election_data_clean|> 
+  mutate(date_elec = make_date(anno, mes)) |> 
+  select(-tipo_eleccion, -codigo_distrito_electoral, -siglas) |> 
+  mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
+
+
+#red datasets are needed by NIenke- do not change
+election_data_clean_red <- election_data_clean |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  filter(year(date_elec) >= 2018) |> 
+  drop_na(votes)
+```
 
 ### Alex- Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
@@ -546,3 +586,276 @@ survey_elec_sample|>
   
 ```
 
+## Free questions
+
+### Vote transfers (Mika)
+
+Election data
+
+```{r}
+
+```
+
+### Voter turnout (Frederick)
+
+-   per election / per election or autonomic community (ccaa)
+
+-   lollipop chart
+
+For each community voter turnouts are calculated.
+
+```{r}
+# Voter turnout regions
+election_data_clean_lollipop <-
+  election_data_clean |> 
+  filter(date_elec >= "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
+  select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  distinct(municipio_id, mes, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |> 
+  group_by(codigo_ccaa, mes) |> 
+  summarise(votes_sum = sum(votes_casted),
+            population_sum = sum(censo) ) |> 
+  ungroup() |> 
+  mutate(voter_turnout = (votes_sum / population_sum) * 100) 
+
+# Voter turnout Spain
+
+election_data_clean_lollipop_avg <-
+  election_data_clean |> 
+  filter(date_elec >= "2019-04-01") |> 
+  mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
+  select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  distinct(municipio_id, mes, .keep_all = T) |> 
+  select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |>
+  group_by(mes) |> 
+  summarise(votes_sum = sum(votes_casted),
+            population_sum = sum(censo) ) |>
+  mutate(voter_turnout = (votes_sum / population_sum) * 100)
+
+election_data_clean_lollipop_avg$codigo_ccaa <- "00"
+
+
+election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election_data_clean_lollipop_avg)
+```
+
+Data manipulation for differences and factorising 'codigo_ccaa'
+
+```{r}
+# differences
+election_data_clean_lollipop_dif <- election_data_clean_lollipop |> 
+  group_by(codigo_ccaa) |> 
+  mutate(difference = voter_turnout - lag(voter_turnout, default = voter_turnout[1])) |> 
+  ungroup() |> 
+  filter(mes == "11")
+
+# ordering codigo variable for subsequent plot
+max_turnout_mes04 <- election_data_clean_lollipop %>%
+  filter(mes == "04") %>%
+  group_by(codigo_ccaa) %>%
+  summarize(max_turnout = max(voter_turnout))
+
+# Order codigo_ccaa based on max_turnout_mes11
+order_by_max_turnout <- max_turnout_mes04 %>%
+  arrange(max_turnout) %>%
+  pull(codigo_ccaa)
+
+# Apply the order to the codigo_ccaa factor
+election_data_clean_lollipop$codigo_ccaa <- factor(
+  election_data_clean_lollipop$codigo_ccaa,
+  levels = order_by_max_turnout
+)
+```
+
+Creating the lollipop graph
+
+```{r}
+# for segments
+data_00 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "00")
+data_01 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "01")
+data_02 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "02")
+data_03 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "03")
+data_04 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "04")
+data_05 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "05")
+data_06 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "06")
+data_07 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "07")
+data_08 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "08")
+data_09 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "09")
+data_10 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "10")
+data_11 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "11")
+data_12 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "12")
+data_13 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "13")
+data_14 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "14")
+data_15 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "15")
+data_16 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "16")
+data_17 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "17")
+data_18 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "18")
+data_19 <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa == "19")
+
+# for differently colored Spain label
+label_Spain <- election_data_clean_lollipop |> 
+  filter(codigo_ccaa =="00") |> 
+  mutate(codigo_ccaa = as.character(codigo_ccaa))
+
+
+
+ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, group= mes), size = 2) + 
+  geom_point(aes(color = mes)) +
+  labs(title = "Difference in Voter Turnout\nby Region (April vs. November 2019)",
+       x = "",
+       y = "") +
+  guides(col= guide_legend(title= "Election")) +
+  scale_color_manual(labels = c("April 2019", "November 2019"), values = c("blue", "red")) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1),
+                     limits = c(45, NA),
+                     breaks = seq(45, 80, by = 5),) +
+   geom_segment(data = data_00, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_01, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_02, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_03, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_04, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_05, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_06, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_07, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_08, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_09, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_10, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_11, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_12, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_13, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_14, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_15, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+   geom_segment(data = data_16, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_17, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_18, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_segment(data = data_19, aes(xend = max(voter_turnout), yend = codigo_ccaa), color = "black") +
+  geom_text(data = election_data_clean_lollipop_dif,
+            aes(label = sprintf("%.2f%%", difference),
+                x = voter_turnout, 
+                y = codigo_ccaa),
+            vjust = 0.4,
+            hjust = 1.1,
+            size = 3, 
+            color = "black") +
+  theme_minimal() +
+  scale_y_discrete(labels=c("00" = "Average in Spain",
+                            "01"="Andalucia",
+                            "02"="Aragon",
+                            "03"="Asturias",
+                            "04"="Baleares",
+                            "05"="Cantabria",
+                            "06"="Castilla La Mancha",
+                            "07"="Castilla Leon",
+                            "08"="Cataluna",
+                            "09"="Canarias",
+                            "10"="Extremadura",
+                            "11"="Galicia",
+                            "12"="Madrid",
+                            "13"="Murcia",
+                            "14"="Navarra",
+                            "15"="Comunidad Valenciana",
+                            "16"="Pais Vasco",
+                            "17"="La Rioja",
+                            "18"="Ceuta",
+                            "19"="Melilla")) + 
+  theme(plot.margin = margin(5, 10, 5, -8))
+```
+
+### Election winners map (Frederick)
+
+Getting the data for first 2019 election
+
+```{r}
+
+election_data_clean_red_winner_2019_a <- election_data_clean_abbrev |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  filter(date_elec == "2019-04-01") |> 
+  drop_na(votes) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(date_elec, municipio_id) |> 
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |> ungroup() |> 
+  slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
+  select(municipio_id, vote_share, party_collect, party)
+
+
+test <- election_data_clean_red_winner_2019_a |> 
+  filter(is.na(party_collect))
+```
+
+### Vote transfers
+
+```{r}
+election_data_mika <- 
+  election_data_clean |> 
+  filter(anno == 2019) |> 
+  select(-c(anno, numero_mesas, vuelta, censo, participacion_1, participacion_2))
+
+data_apr<- election_data_mika |> 
+  filter(mes == "04") |> 
+  summarise(votos_apr = sum(votes),
+            .by = party_collect)
+
+data_nov<- election_data_mika |> 
+  filter(mes == "11") |> 
+  summarise(votos_nov = sum(votes),
+            .by = party_collect)
+
+vote_transfers<- data_apr |> 
+  left_join(data_nov, by = "party_collect")
+
+
+```
+
+```{r}
+library(GGally)
+party_colors <- c("UP_IU"="#8968CD", 
+                    "PSOE"="#CD2626",
+                    "PP"="#0055A4", 
+                    "VOX"="#5ABF35", 
+                    "BAI"="#EECFA1",
+                    "OTHER" = "#999999",
+                    "PNV" = "#008341",
+                    "EH_BILDU" = "#00D0B6",
+                    "CS" = "#FF5001",
+                    "ERC" = "#F0D85D",
+                    "BNG" = "#77B4E0",
+                    "MP" = "#02988B")
+
+vote_transfers |> 
+  ggparcoord(columns = 2:3, 
+             groupColumn = 1, 
+             showPoints = TRUE) +
+  scale_color_manual(values = party_colors)
+
+
+```
+
+
+
+### Network analysis (Mika)
+
+```{r}
+
+```
