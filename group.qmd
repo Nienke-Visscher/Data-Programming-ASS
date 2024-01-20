@@ -216,13 +216,12 @@ abbrev_test <- abbrev |>
     str_detect(siglas, "PP") |
     str_detect(denominacion, "PARTIDO POPULAR")  ~ "PP", # PARTIDO POPULAR
     
-    str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
+    str_detect(denominacion, "CIUDADANOS-") |
+    str_detect(denominacion, "PARTIDO DE LA CIUDADANÍA")  ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
     
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
-      str_detect(denominacion, "PODEM")|
-
       str_detect(denominacion, "EZKER") |
       str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
     
@@ -237,16 +236,11 @@ abbrev_test <- abbrev |>
       str_detect(denominacion, "VASCO") ~ "PNV", # PARTIDO NACIONALISTA VASCO
     
     
-      str_detect(siglas, "BNG") |
-      str_detect(denominacion, "GALLEG") |
-      str_detect(denominacion, "GALICIA") |
-      str_detect(denominacion, "GALEGUISTA")|
-      str_detect(denominacion, "GALEG") |
-      str_detect(denominacion, "GALIZ") ~ "BNG", # BLOQUE NACIONALISTA GALLEGO
+      str_detect(siglas, "BNG") ~ "BNG", # BLOQUE NACIONALISTA GALLEGO
     
       str_detect(siglas, "VOX") ~ "VOX", # VOX
     
-      str_detect(siglas, "PAÍS") ~ "MP", # MÁS PAÍS
+      str_detect(siglas, "MÁS PAÍS") ~ "MP", # MÁS PAÍS
     
       str_detect(siglas, "COMPROMÍS")  ~ "CP", # COMPROMÍS
     
@@ -464,8 +458,7 @@ plot1 <- ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc,
 
 ```
 
-In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties. 
-
+In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties.
 
 ### Alex- Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
