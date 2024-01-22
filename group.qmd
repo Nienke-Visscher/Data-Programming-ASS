@@ -28,7 +28,9 @@ library(igraph)
 library(CGPfunctions)
 library(patchwork)
 library(mapSpain)
+
 library(glue)
+
 ```
 
 ## Data
@@ -158,11 +160,6 @@ survey_clean <- surveys |>
 ### Joining tables
 #### Joining abbrev_collect and election data
 ```{r}
-# this data set will later be used in its non-reduced form
-election_data_clean_abbrev <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
-# this data set will later be reduced
 election_data_clean <- election_data_clean |> 
   left_join(abbrev_collect, by = c("party" = "denominacion"))
 ```
@@ -232,9 +229,6 @@ election_data_clean_1 <-  election_data_clean |>
 #election_data_sample <- election_data_clean_1 |> 
   #slice_sample(prop =0.10)
 
-national_parties
-regional_nationalist_parties
-
 election_data_q1 <- election_data_clean_1 |>
   group_by(date_elec, party_collect) |> 
   mutate(party_type =
@@ -264,15 +258,23 @@ election_data_q1 <- election_data_q1 |>
 graph_data <- election_data_q1 |> 
   group_by(date_elec) |> 
   distinct(party_type, votes_elec_party_perc) 
-
-plot1 <- ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = party_type, group = party_type)) +
-  geom_line() +
-  scale_y_continuous(breaks = seq(0, 100, by = 10))
-
-plot1
 ```
 
-In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties.
+Creating the plot.
+```{r}
+ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = party_type, group = party_type)) +
+  geom_line() +
+  geom_text(aes(label = sprintf("%.1f%%", votes_elec_party_perc)), vjust = -0.5, hjust = 0.5, size = 3, color = "black") +
+  labs(title = "Vote Share of National and Regional Parties\nin Elections between 2008 and 2019",
+       y = "",
+       x = "Date of Election") +
+  scale_y_continuous(breaks = seq(0, 100, by = 10))+
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")+
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+The plot at the end shows the relationship of the share going to each group of parties. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties. Regional and nationalist parties recorded their highest share in the 2011 election.
 
 ### Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
@@ -280,15 +282,9 @@ In this section I took the national parties and compared them to all the other p
 election_data_clean_2 <-election_data_clean |> 
   select(-(anno:vuelta)) |> 
   mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> #code to track each by municipality
-  group_by(codigo_ccaa_pro_muni) |> 
-  mutate(votes_nul_blanc_total = votos_blancos+ votos_nulos) |> #votes that each municipality casted that didnt count
-  mutate(votes_municipality = sum(votes)) |> #votes casted in each municipality 
-  ungroup() |> 
-  mutate(total_votes_municipality = votes_nul_blanc_total + votes_municipality) |> #total votes casted in each municipality for every row
-  group_by(codigo_ccaa_pro_muni, party_collect) |> 
-  mutate(votes_party_municipality = votes) |> #for each party in each municipality total votes
-  ungroup() |> 
-  mutate(votes_perc_party_municipality = (votes_party_municipality/total_votes_municipality)*100) |> #percentage of votes that a party got from the total amount of votes cast in each municipality
+  mutate(total_votes_municipality = votos_blancos+ votos_nulos + votos_candidaturas) |> #total votes casted in each municipality for every row
+  group_by(date_elec, codigo_ccaa_pro_muni) |> 
+  mutate(votes_perc_party_municipality = (votes/total_votes_municipality)*100) |> #percentage of votes that a party got from the total amount of votes cast in each municipality
   ungroup()
   
  q2_final_result <- election_data_clean_2 |> 
@@ -296,12 +292,20 @@ election_data_clean_2 <-election_data_clean |>
    group_by(date_elec, codigo_ccaa_pro_muni) |> 
    arrange(desc(votes_perc_party_municipality)) |> 
    slice(1) |> 
-   ungroup() |> 
-   left_join(cod_mun, by = c("codigo_ccaa_pro_muni" = "cod_mun")) |> 
-   select(date_elec, municipio, party_collect, censo,  votes_perc_party_municipality) 
-   
-q2_final_result
+   ungroup() 
+```
 
+```{r}
+ggplot(q2_final_result, 
+       aes(x =party_collect))+
+  geom_bar(stat = "count", fill = "black") +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+  labs(title = "Election Winners in Municipalities with more than 100,000 inhabitants in each election", 
+       x = "Party", 
+       y = "Count") +
+    guides(fill = guide_legend(title = "Party")) +
+  theme_classic() +
+  facet_wrap(~date_elec, scales = "free_x")
 ```
 
 ### Q3 Which party was the second when the first was the PSOE? And when the first was the PP?
@@ -341,123 +345,85 @@ parties_2nd_place_after_PP <- election_data_q3 |>
 
 Barplot for if PSOE wins
 ```{r}
-ggplot(election_data_mika, 
-       aes(x = convocatorias, 
-           y = vote_share, 
-           fill = party_collect)) +
-  geom_bar(stat = "identity") + 
-  scale_fill_manual(values = party_colors) +
-  labs(title = "Vote distribution", 
-       x = "Election", 
-       y = "Vote share") +
-    guides(fill = guide_legend(title = "Party"))+
-  theme_minimal()
+ggplot(parties_2nd_place_after_PSOE, 
+       aes(x =party_collect))+
+  geom_bar(stat = "count", fill = "black") +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+  labs(title = "Second placed parties if PSOE wins a municipality", 
+       x = "Party", 
+       y = "Count") +
+    guides(fill = guide_legend(title = "Party")) +
+  theme_classic()
 ```
 Barplot for if PP wins
 ```{r}
-ggplot(election_data_mika, 
-       aes(x = convocatorias, 
-           y = vote_share, 
-           fill = party_collect)) +
-  geom_bar(stat = "identity") + 
-  scale_fill_manual(values = party_colors) +
-  labs(title = "Vote distribution", 
-       x = "Election", 
-       y = "Vote share") +
-    guides(fill = guide_legend(title = "Party"))+
-  theme_minimal()
+ggplot(parties_2nd_place_after_PP, 
+       aes(x =party_collect))+
+  geom_bar(stat = "count", fill = "black") +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+  labs(title = "Second placed parties if PP wins a municipality", 
+       x = "Party", 
+       y = "Count") +
+    guides(fill = guide_legend(title = "Party")) +
+  theme_classic()
 ```
 ### Q4 Who benefits from low turnout?
 ```{r}
 #Create turnout column
-election_data_turnout <- election_data_clean |> 
-  group_by(codigo_municipio, anno) |> 
+election_data_turnout <- election_data_clean |>  
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(municipio_id, date_elec) |> 
   mutate(
-    turnout_pcg = round(((votos_candidaturas/censo)*100), digits = 2)) |> 
-  ungroup() |> 
-  mutate(
-    party_collect=party_collect.x) |> 
-  group_by(anno, party_collect) |> 
-  mutate(
-    sum_votes = sum(votes))
-
-#Low turnout dataset
-low_turnout_data <- election_data_turnout |> 
-  mutate(party_collect = party_collect.x) |> 
-  mutate(sum_votes = sum_votes) |>  # make sure sum_votes is present
-  select(anno, censo, votes, party, party_collect, turnout_pcg, sum_votes) |> 
-  filter(turnout_pcg < 50, votes > 0)
-
-
-plot_low <- ggplot(low_turnout_data, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Low turnout",
-       x = "Party",
-       y = "")+
- theme(axis.text.y = element_blank())
-
-#High turnout database
-high_turnout_data <- election_data_turnout |> 
-  mutate(party_collect = party_collect.x) |> 
-  mutate(sum_votes = sum_votes) |>  # make sure sum_votes is present
-  select(anno, censo, votes, party, party_collect, turnout_pcg, sum_votes) |> 
-  filter(turnout_pcg >= 50, votes > 0)
-
-
-plot_high <- ggplot(high_turnout_data, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
-  geom_bar(stat = "identity") +
-  labs(title = "High turnout",
-       x = "Party",
-       y = "")+
- theme(axis.text.y = element_blank())
-
-library(patchwork)
-
-plot_high + plot_low + plot_layout(nrow = 2)
+    turnout_pcg = round((((votos_candidaturas+votos_nulos+votos_blancos)/censo)*100), digits = 2)) |>
+  ungroup() |>
+  group_by(municipio_id) |>  
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  ungroup() 
 ```
 
-### Q5 Who benefits from low turnout?
 ```{r}
-#Subset with rural municipalities
-election_data_rural<- election_data_clean |> 
-  mutate(party_collect = party_collect.x) |> 
-  select(anno, censo, votes, party, party_collect) |> 
-  filter(censo < 30000, votes > 0) |> 
-  group_by(party_collect, anno) |> 
-  mutate(
-    sum_votes = sum(votes)
-  )
+#Low turnout dataset
+low_turnout_winners <- election_data_turnout |> 
+  filter(turnout_pcg < 60) |>
+  dplyr::slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
+  select(vote_share, party, party_collect)
 
-#Subset with urban municipalities
-election_data_urban <- election_data_clean |> 
-  mutate(party_collect = party_collect.x) |> 
-  select(anno, censo, votes, party, party_collect) |> 
-  filter(censo > 30000, votes > 0) |>
-  group_by(party_collect, anno) |> 
-  mutate(
-    sum_votes = sum(votes)
-  )
-
-#Plots
-plot_rural <- ggplot(election_data_rural, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Votos por Partido en Áreas Rurales",
-       x = "Partido",
-       y = "")+
- theme(axis.text.y = element_blank())+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-plot_urban <- ggplot(election_data_urban, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Votos por Partido en Áreas Urbanas",
-       x = "Partido",
-       y = "")+
- theme(axis.text.y = element_blank())+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-plot_rural + plot_urban + plot_layout(nrow = 2)
+ggplot(low_turnout_data, aes(x = party_collect)) +
+  geom_bar(stat = "count") +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+  labs(title = "Number of Municipalities Won by Party in Low Turnout Elections",
+       caption = "Low turnout defined as any election with a turnout less than 60% ",
+       x = "Party",
+       y = "") +
+  scale_y_continuous(breaks = seq(0, 55000, by = 10000)) +
+  theme_classic()
 ```
+
+Historically, since 2008, in low turnout elections, smaller parties have had a higher chance of winning the election.
+
+### Q5 How to analyze the relationship between census and vote? Is it true that certain parties win in rural areas?
+```{r}
+#Subset with rural municipalities and their winners
+election_winners_rural<- election_data_clean |>  
+  filter(censo < 30000, votes > 0) |> 
+  mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
+  group_by(date_elec, municipio_id) |>  
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  ungroup() |> 
+  dplyr::slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
+  select(vote_share, party, party_collect)
+
+#Plot the count of each party winning rural areas
+ggplot(election_winners_rural, aes(x = party_collect)) +
+  geom_bar(stat = "count") +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
+  labs(title = "Winning Parties in Rural Areas",
+       caption = "Rural area defined as municipality with less than 30,000 inhabitants",
+       x = "Party",
+       y = "Count")+
+  theme_classic()
+```
+As may be expected, the PP is most successful in elections in rural areas.
 
 ### Q6 How to calibrate the error of the polls (remember that the polls are voting intentions at national level)?
 ```{r}
@@ -663,14 +629,15 @@ election_data_clean_lollipop_dif <- election_data_clean_lollipop |>
   filter(mes == "11")
 
 # ordering codigo variable for subsequent plot
-max_turnout_mes04 <- election_data_clean_lollipop %>%
-  filter(mes == "04") %>%
-  group_by(codigo_ccaa) %>%
-  summarize(max_turnout = max(voter_turnout))
+max_turnout_mes04 <- election_data_clean_lollipop |> 
+  filter(mes == "04") |> 
+  group_by(codigo_ccaa) |> 
+  summarize(max_turnout = max(voter_turnout)) |> 
+  ungroup()
 
 # Order codigo_ccaa based on max_turnout_mes11
-order_by_max_turnout <- max_turnout_mes04 %>%
-  arrange(max_turnout) %>%
+order_by_max_turnout <- max_turnout_mes04 |> 
+  arrange(max_turnout) |> 
   pull(codigo_ccaa)
 
 # Apply the order to the codigo_ccaa factor
@@ -837,9 +804,9 @@ munic <-
 elec_winner_munic_2019b <- munic |> 
   left_join(election_data_clean_red_winner_2019_b, by = c("municipio_id" = "municipio_id"))  
 
-# 2019 a election winners map  
-# party colors 
+# 2019 a election winners map 
 
+# party colors
 party_colors <- c("UP_IU"="#8968CD",  
                   "PSOE"="#CD2626",
                   "PP"="#0055A4", 
@@ -852,6 +819,7 @@ party_colors <- c("UP_IU"="#8968CD",
                   "ERC" = "#F0D85D",    
                   "BNG" = "#77B4E0",  
                   "MP" = "#02988B") 
+
 
 ggplot(esp_can) +
   geom_sf() +
