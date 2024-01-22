@@ -464,8 +464,7 @@ plot1 <- ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc,
 
 ```
 
-In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties. 
-
+In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties.
 
 ### Alex- Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
@@ -716,7 +715,6 @@ For each community voter turnouts are calculated.
 # Voter turnout regions
 election_data_clean_lollipop <-
   election_data_clean |> 
-
   filter(date_elec >= "2019-04-01") |> 
   mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
   select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
@@ -1064,32 +1062,48 @@ ggplot(esp_can) +
   facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
 
-### Vote transfers
+### Vote distribution
 
 ```{r}
 election_data_mika <- 
   election_data_clean |> 
-  filter(anno == 2019) |> 
-  select(-c(anno, numero_mesas, vuelta, censo, participacion_1, participacion_2))
+  select(c(party_collect, votes, date_elec)) 
 
-data_apr<- election_data_mika |> 
-  filter(mes == "04") |> 
-  summarise(votos_apr = sum(votes),
-            .by = party_collect)
 
-data_nov<- election_data_mika |> 
-  filter(mes == "11") |> 
-  summarise(votos_nov = sum(votes),
-            .by = party_collect)
+election_data_mika$party_collect<- 
+factor(election_data_mika$party_collect)
 
-vote_transfers<- data_apr |> 
-  left_join(data_nov, by = "party_collect")
+election_data_mika<- election_data_mika |> 
+  summarise(votos_partidos = sum(votes),
+            .by = c(party_collect, 
+                    date_elec, 
+                    TOTALvotos_poreleccion)) |> 
+  na.omit()
+
+voteshare<- election_data_clean |>
+  select(c(party_collect, votes, date_elec)) |> 
+  summarise(TOTALvotos_poreleccion = sum(votes),
+            .by = c(date_elec))
+
+election_data_mika<-
+  election_data_mika |> 
+  left_join(voteshare, by = "date_elec") 
+
+election_data_mika<- election_data_mika |> 
+  mutate("vote_share" = round( votos_partidos/TOTALvotos_poreleccion*100, 2)) 
+
+election_data_mika <- election_data_mika |> 
+  mutate(convocatorias = format_ISO8601(date_elec, 
+                                        precision = "ym"))
+
 
 
 ```
 
+## Option 1: stream
+
 ```{r}
-library(GGally)
+library(ggstream)
 party_colors <- c("UP_IU"="#8968CD", 
                     "PSOE"="#CD2626",
                     "PP"="#0055A4", 
@@ -1103,17 +1117,105 @@ party_colors <- c("UP_IU"="#8968CD",
                     "BNG" = "#77B4E0",
                     "MP" = "#02988B")
 
-vote_transfers |> 
-  ggparcoord(columns = 2:3, 
-             groupColumn = 1, 
-             showPoints = TRUE) +
-  scale_color_manual(values = party_colors)
 
+
+election_data_mika |> 
+  ggplot(aes(x = date_elec, 
+             y = votos_partidos, 
+             fill = party_collect)) +
+  geom_stream(type = "mirror",
+              color = "white", 
+              lwd = 0.25,
+              bw = 1,
+              n_grid = 100)+
+    scale_fill_manual(values = party_colors) +
+    labs(title = "Vote Distribution", 
+         x = NULL, 
+         y = "Votes") +
+      guides(fill = guide_legend(title = "Party"))+
+  theme_void()
+
+
+```
+
+## Option 2: stacked bars
+
+```{r}
+ggplot(election_data_mika, 
+       aes(x = convocatorias, 
+           y = vote_share, 
+           fill = party_collect)) +
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = party_colors) +
+  labs(title = "Vote distribution", 
+       x = "Election", 
+       y = "Vote share") +
+    guides(fill = guide_legend(title = "Party"))+
+  theme_minimal()
+```
+
+## Option 3: slopegraph
+
+```{r}
+install.packages("CGPfunctions")
+library(CGPfunctions)
+
+newggslopegraph(dataframe = election_data_mika,
+                Times = convocatorias,
+                Measurement = vote_share,
+                Grouping = party_collect,
+                Title = "Vote Distribution",
+                SubTitle = "Percentage share of votes per party for electrions from 2008 to 2019",
+                LineColor = party_colors)
 
 ```
 
 ### Network analysis (Mika)
 
 ```{r}
+install.packages("GGally")
+install.packages("network")
+library(GGally)
+library(network)
+install.packages("sna")
+library(sna)
+install.packages("networkD3")
+library(networkD3)
+install.packages("igraph")
+library(igraph)
+
+```
+
+```{r}
+survey_data_mika <- survey_clean |> 
+  distinct(date_elec, pollster, media) |> 
+  select(-date_elec)
+
+network<- graph_from_data_frame(survey_data_mika, directed = F)
+deg <- degree(network, mode="all")
+
+plot(network, 
+     mode = "undirected",
+     layout= layout.random,
+     main="Pollster & Media network",
+     vertex.size=deg*8, 
+     vertex.shape=c("circle"),
+     vertex.color=rgb(0.1,0.7,0.8,0.5),
+     edge.width=E(network)$importance*2,
+     edge.edge.curved= FALSE)
+
+
+
+plot(network, 
+     main="Pollster & Media network",
+     layout= layout_nicely,
+     vertex.size=deg*9,
+     vertex.label.color = "black", 
+     vertex.label.cex = 0.6,
+     vertex.label.degree = -pi/2,
+     edge.arrow.size = 0, 
+     edge.arrow.width = 0, 
+     edge.color = "black")
+
 
 ```
