@@ -12,30 +12,30 @@ editor_options:
   chunk_output_type: console
 ---
 
-### Required packages
+## Required packages
 
 > Insert in the lower chunk the packages you will need
 
-```{r}
+```{r Libraries}
+#| echo: true
+
 rm(list = ls())
 library(tidyverse)
 library(lubridate)
 library(forcats)
 library(dplyr)
+library(igraph)
+library(CGPfunctions)
+library(patchwork)
+library(mapSpain)
 ```
 
-## Group task
-
-### Data
+## Data
 
 The practice will be based on the **electoral data archives** that we have already worked on, compiling data on elections to the Spanish Congress of Deputies from 2008 to the present.
 
-```{r}
-# NO TOQUES NADA
-#election_data <- read_csv(file = "./data/datos_elecciones_brutos.csv")
-#cod_mun <- read_csv(file = "./data/cod_mun.csv")
-#surveys <- read_csv(file = "./data/historical_surveys.csv")
-#abbrev <- read_csv(file = "./data/siglas.csv")
+```{r Data}
+#| echo: true
 
 election_data <- read_csv(file = "datos_elecciones_brutos.csv")
 cod_mun <- read_csv(file = "cod_mun.csv")
@@ -47,123 +47,28 @@ The data will be as follows:
 
 -   `poll_data`: file with election data for Congress from 2018 to the last ones in 2019.
 
-    -   `tipo_eleccion`: type of election (02 if congressional election)
-    -   `anno`, `mes`: year and month of elections
-    -   `vuelta`: electoral round (1 if first round)
-    -   `codigo_ccaa, codigo_provincia, codigo_municipio, codigo_distrito_electoral`: code of the ccaa, province, municipality and electoral district.
-    -   `numero_mesas`: number of polling stations
-    -   `censo`: census
-    -   `participacion_1, participacion_2`: participation in the first preview (14:00) and second preview (18:00) before polls close (20:00)
-    -   `votos_blancos`: blank ballots
-    -   `votos_candidaturas`: party ballots
-    -   `votos_nulos`: null ballots
-    -   ballots for each party
-
 -   `cod_mun`: file with the codes and names of each municipality
 
 -   `abbrev`: acronyms and names associated with each party
 
 -   `surveys`: table of electoral polls since 1982. Some of the variables are the following:
 
-    -   `type_survey`: type of survey (national, regional, etc.)
-    -   `date_elec`: date of future elections
-    -   `id_pollster`, `pollster`, `media`: id and name of the polling company, as well as the media that commissioned it.
-    -   `field_date_from`, `field_date_to`: start and end date of fieldwork
-    -   `exit_poll`: whether it is an exit poll or not
-    -   `size`: sample size
-    -   `turnout`: turnout estimate
-    -   estimated voting intentions for the main parties
+You must obligatorily answer the following questions (plus those that you consider analyzing to distinguish yourself from the rest of the teams, either numerically and/or graphically)
 
-### Objectives and mandatory items
+-   How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+-   Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+-   Which party was the second when the first was the PSOE? And when the first was the PP?
+-   Who benefits from low turnout?
+-   How to analyze the relationship between census and vote? Is it true that certain parties win in rural areas?
+-   How to calibrate the error of the polls (remember that the polls are voting intentions at national level)?
+-   In which election were the polls most wrong?
+-   How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
+-   Which polling houses got it right the most and which ones deviated the most from the results?
 
-The objective of the delivery is to perform an analysis of the electoral data, carrying out the debugging, summaries and graphs you consider, both of their results and the accuracy of the electoral polls.
+## Data cleaning
+### Election data
 
-Specifically, **you must work only in the time window that includes the elections from 2008 to the last elections of 2019**.
-
-#### General comments
-
-In addition to what you see fit to execute, the following items are mandatory:
-
--   Each group should present **at least 48 hours in advance an analysis of the data** in `.qmd` and `.html` format in **slides** mode, which **will be the ones they will present on the day of the presentation**.
-
--   During the presentation you will **explain the analysis performed** so that **each team member speaks for a similar amount of time** and **each member can be asked about any of the steps**. The grade does not have to be the same for all members.
-
--   It will be valued not only the content but also the container (aesthetics).
-
--   It will be valued positively that the slides are hosted on Github.
-
--   The objective is to demonstrate that the maximum knowledge of the course has been acquired: the more content of the syllabus is included, the better.
-
-#### Mandatory items:
-
--   Data should be **converted to tidydata** where appropriate.
-
--   You should **include at least one join** between tables.
-
--   Reminder: information = variance, so **remove columns that are not going to contribute anything**.
-
--   The **glue and lubridate** packages should be used at some point, as well as the **forcats**. The use of **ggplot2** will be highly valued.
-
--   The following should be used at least once:
-
-    -   mutate
-    -   summarise
-    -   group_by (or equivalent)
-    -   case_when
-
--   We have many, many parties running for election. We will only be interested in the following parties:
-
-    -   PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
-    -   PARTIDO POPULAR
-    -   CIUDADANOS (caution: has/had federations - branches - with some other name)
-    -   PARTIDO NACIONALISTA VASCO
-    -   BLOQUE NACIONALISTA GALLEGO
-    -   COMPROMÍS
-    -   CONVERGÈNCIA I UNIÓ
-    -   UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, ...- and have not always gone together, but here we will analyze them together
-    -   ESQUERRA REPUBLICANA DE CATALUNYA
-    -   EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
-    -   MÁS PAÍS
-    -   VOX
-
--   Anything other than any of the above parties should be imputed as "OTHER". Remember to add the data after the previous recoding.
-
--   Party acronyms will be used for the visualizations. The inclusion of graphics will be highly valued (see <https://r-graph-gallery.com/>).
-
--   You must use all 4 data files at some point.
-
--   You must define at least one (non-trivial) function of your own.
-
--   You will have to discard mandatory polls that:
-
-    -   refer to elections before 2018
-    -   that are exit polls
-    -   have a sample size of less than 750 or are unknown
-    -   that have less than 1 or less fieldwork days
-
--   You must obligatorily answer the following questions (plus those that you consider analyzing to distinguish yourself from the rest of the teams, either numerically and/or graphically)
-
-    -   How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
-    -   Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
-    -   Which party was the second when the first was the PSOE? And when the first was the PP?
-    -   Who benefits from low turnout?
-    -   How to analyze the relationship between census and vote? Is it true that certain parties win in rural areas?
-    -   How to calibrate the error of the polls (remember that the polls are voting intentions at national level)?
-    -   In which election were the polls most wrong?
-    -   How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
-    -   Which polling houses got it right the most and which ones deviated the most from the results?
-
-#### Marks
-
-**The one who does the most things will not be valued the most**. More is not always better. The **originality** (with respect to the rest of the works, for example in the analyzed or in the subject or ...) of what has been proposed, in the handling of tables (or in the visualization), the **caring** put in the delivery (care in life is important) and the **relevance** of what has been done will be valued. Once you have the mandatory items with your database more or less completed, **think before** chopping code: what could be interesting? What do I need to get a summary both numerical and visual?
-
-Remember that the real goal is to demonstrate a mastery of the tools seen throughout the course. And that happens not only by the quantity of them used but also by the quality when executing them.
-
-## Election_data
-
-### Data cleaning and tidy data
-
-```{r}
+```{r Data cleaning election data}
 election_data_clean <- election_data |> 
   pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
                names_to = "party",
@@ -173,20 +78,12 @@ election_data_clean <- election_data |>
 election_data_clean<-election_data_clean|> 
   mutate(date_elec = make_date(anno, mes)) |> 
   select(-tipo_eleccion, -codigo_distrito_electoral) |> 
-  mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
-
-
-#red datasets are needed by NIenke- do not change
-election_data_clean_red <- election_data_clean |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
-  filter(year(date_elec) >= 2018) |> 
-  drop_na(votes)
+  mutate(votes = ifelse(is.na(votes), 0, votes)) #changing all NA values to 0, as we expect that the data set misinterprets 0s as NA
 ```
 
-## Abbrev data
+### Abbrev data
 
-```{r}
-
+```{r Data cleaning abbrev data}
 distinct_parties <- election_data_clean |>  
   distinct(party)
 
@@ -199,104 +96,51 @@ abbrev_test <- abbrev |>
   #full_join(distinct_parties, by = c("denominacion" = "party")) |> 
   #filter(is.na(siglas))
 
-
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev_test |> 
   mutate(party_collect = case_when(
     str_detect(siglas, "PSOE") |
       str_detect(siglas, "P.S.O.E") | 
-
       str_detect(siglas, "psoe") |
     str_detect(denominacion, "PARTIDO SOCIALISTA") |
     str_detect(denominacion, "PSOE") |
-    str_detect(denominacion, "P.S.O.E.") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL (beware: it has/had federations - branches - with some other name).
-    
+    str_detect(denominacion, "P.S.O.E.") ~ "PSOE", # PARTIDO SOCIALISTA OBRERO ESPAÑOL
     str_detect(denominacion, "CONVERGENCIA I UNIO") ~ "CU", # CONVERGÈNCIA I UNIÓ
-    
     str_detect(siglas, "PP") |
     str_detect(denominacion, "PARTIDO POPULAR")  ~ "PP", # PARTIDO POPULAR
-    
-    str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS (caution: has/had federations - branches - with some other name)
-    
+    str_detect(denominacion, "CIUDADANOS-") ~ "CS", #CIUDADANOS 
     str_detect(denominacion, "UNIDAS")|
       str_detect(siglas, "PODEMOS")|
       str_detect(denominacion, "VERDES")|
       str_detect(denominacion, "PODEM")|
-
       str_detect(denominacion, "EZKER") |
-      str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
-    
+      str_detect(siglas, "IU")~ "UP_IU", #UNIDAS PODEMOS - IU 
     str_detect(denominacion, "BILDU")|
       str_detect(siglas, "EH")|
       str_detect(denominacion, "SORTU")|
       str_detect(denominacion, "ALKARTASUNA")|
       str_detect(denominacion, "ARALAR") |
-      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU", # EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
-      
-
+      str_detect(denominacion, "ALTERNATIBA") ~ "EH_BILDU", # EH - BILDU 
       str_detect(denominacion, "VASCO") ~ "PNV", # PARTIDO NACIONALISTA VASCO
-    
-    
       str_detect(siglas, "BNG") |
       str_detect(denominacion, "GALLEG") |
       str_detect(denominacion, "GALICIA") |
       str_detect(denominacion, "GALEGUISTA")|
       str_detect(denominacion, "GALEG") |
       str_detect(denominacion, "GALIZ") ~ "BNG", # BLOQUE NACIONALISTA GALLEGO
-    
       str_detect(siglas, "VOX") ~ "VOX", # VOX
-    
       str_detect(siglas, "PAÍS") ~ "MP", # MÁS PAÍS
-    
       str_detect(siglas, "COMPROMÍS")  ~ "CP", # COMPROMÍS
-    
       str_detect(siglas, "ERC") |
       str_detect(denominacion, "CATALUNYA SÍ") ~ "ERC", # ESQUERRA REPUBLICANA DE CATALUNYA
-    
     TRUE ~ "OTHER"))|> 
-    distinct(denominacion, .keep_all = TRUE) 
- 
- test <- abbrev_collect |> 
-   filter(is.na(siglas))
-
- national_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
- 
- regional_nationalist_parties <-  c("OTHER", "ERC", "CP", "BNG", "CU", "PNV", "EH_BILDU" )
- 
-
-#JUST TO CHECK-- Use code below to check the actual party names and abreviations
-#PARTIDO SOCIALISTA OBRERO ESPAÑOL
-abbrev |> 
-filter(str_detect(siglas, "PSOE")|str_detect(siglas, "P.S.O.E")|str_detect(siglas, "psoe"))
-
-#CIUDADANOS
-abbrev |> 
-  filter(str_detect(denominacion, "CIUDADANOS"))
-
-#UNIDAS PODEMOS - IU (beware that here they have had various names - IU, los verdes, podem, ezker batua, …- and have not always gone together, but here we will analyze them together
-abbrev |> 
-  filter(str_detect(denominacion, "UNIDAS")|str_detect(siglas, "PODEMOS")|str_detect(denominacion, "VERDES")|str_detect(denominacion, "PODEM")|str_detect(denominacion, "EZKER")) |> 
-  print(n=100)
-
-#EH - BILDU (are now a coalition of parties formed by Sortu, Eusko Alkartasuna, Aralar, Alternatiba)
-abbrev |> 
-  filter(str_detect(denominacion, "BILDU")|str_detect(siglas, "EH")|str_detect(denominacion, "SORTU")|str_detect(denominacion, "ALKARTASUNA")|str_detect(denominacion, "ARALAR") |str_detect(denominacion, "ALTERNATIBA")) |> 
-  print(n=100)
-
+    distinct(denominacion, .keep_all = TRUE)
 ```
 
-## Survey data
 
-### Data cleaning and tidy
+### Survey data
 
--   You will have to discard mandatory polls that:
-
-    -   refer to elections before 2018
-    -   that are exit polls
-    -   have a sample size of less than 750 or are unknown
-    -   that have less than 1 or less fieldwork days
-
-```{r}
+```{r Survey data cleaning}
 survey_clean <- surveys |> 
  filter(year(date_elec) >= 2018) |> #Filtering only years >2018
  filter(exit_poll == FALSE) |> # Only keeping non exit polls
@@ -307,13 +151,23 @@ survey_clean <- surveys |>
   pivot_longer(cols ="UCD":"EV", #Pivoting to make tidy data
                names_to = "party",
                values_to = "vote_int")
-
 ```
 
 ### Joining tables
+#### Joining abbrev_collect and election data
+```{r}
+# this data set will later be used in its non-reduced form
+election_data_clean_abbrev <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party"= "denominacion"))
+
+# this data set will later be reduced
+election_data_clean <- election_data_clean |> 
+  left_join(abbrev_collect, by = c("party" = "denominacion"))
+```
+
+#### Joining abbrev_collect and survey
 
 ```{r}
-
 #Joining the abbrev_collect table with the survey table and adding the abbreviations that are not in the abbrev table to the column: party_collect
 survey_clean_collect<-survey_clean |> 
   left_join(abbrev_collect, by = c("party" = "siglas")) |> 
@@ -339,12 +193,12 @@ survey_clean_collect_red <- survey_clean_collect |>
   select(-field_date_from, -field_date_to, -exit_poll) |> 
   drop_na(vote_int)
 
-
+# removing siglas not to confuse with party_collect
 abbrev_collect<- abbrev_collect |> 
   select(-siglas)
 ```
 
-### Creating ID
+#### Creating ID
 
 Creating an ID to match the election_data table
 
@@ -352,47 +206,6 @@ Creating an ID to match the election_data table
 survey_clean_collect_red <- survey_clean_collect_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
-
-## Election_data
-
-### Data cleaning and tidy data
-
-```{r}
-election_data_clean <- election_data |> 
-  pivot_longer(cols ="BERDEAK-LOS VERDES":"COALICIÓN POR MELILLA", #Pivoting to make tidy data
-               names_to = "party",
-               values_to = "votes")
-
-election_data_clean <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party" = "denominacion")) #many parties in the elections dataset not found in abbrev
-
-#just to test to see if I've gotten all of the party_collect variable correctly
-#test <- election_data_clean |> 
-  #filter(is.na(party_collect)) |> 
-  #distinct(party) 
-  
-
-#removing variables, changing NA votes to 0
-election_data_clean<-election_data_clean|> 
-  mutate(date_elec = make_date(anno, mes)) |> 
-  select(-tipo_eleccion, -codigo_distrito_electoral) |> 
-  mutate(votes = ifelse(is.na(votes), 0, votes)) #CHANGING ALL NA VALUES IN VOTES TO 0!
-
-
-
-```
-
-(Frederick) Joined the two tables (non-reduced) for the Map visualization
-
-```{r}
-election_data_clean_abbrev <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
-election_data_clean <- election_data_clean |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-
-```
-
 ### Joining abbrev_collect
 
 ```{r}
@@ -400,22 +213,15 @@ election_data_clean <- election_data_clean |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
-For last 3 questions
-
-```{r}
-#red datasets are needed by NIenke- do not change
-
-election_data_clean_red <- election_data_clean |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
-  filter(year(date_elec) >= 2018) |> 
-  drop_na(votes)
-```
-
-### Alex- Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
+### Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
 Compare total number of votes of the national parties (PSOE, PP, VOX, CS, MP, UP - IU) against the other parties of focus.
 
 ```{r}
+ national_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
+ 
+ regional_nationalist_parties <-  c("OTHER", "ERC", "CP", "BNG", "CU", "PNV", "EH_BILDU" )
+
 #data set I need for my question
 election_data_clean_1 <-  election_data_clean |> 
   select(-(anno:votos_candidaturas)) 
@@ -461,12 +267,12 @@ plot1 <- ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc,
   geom_line() +
   scale_y_continuous(breaks = seq(0, 100, by = 10))
 
-
+plot1
 ```
 
 In this section I took the national parties and compared them to all the other parties of interest. The plot at the end shows the relationship of the share going to each group. We see that in 2016 the share of votes going to national parties increased, while the opposite happened to regional and nationalist parties.
 
-### Alex- Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
+### Q2 Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
 
 ```{r}
 election_data_clean_2 <-election_data_clean |> 
@@ -474,7 +280,7 @@ election_data_clean_2 <-election_data_clean |>
   mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> #code to track each by municipality
   group_by(codigo_ccaa_pro_muni) |> 
   mutate(votes_nul_blanc_total = votos_blancos+ votos_nulos) |> #votes that each municipality casted that didnt count
-  mutate(votes_municipality = sum(votes)) |> #votes that each municipality casted for real
+  mutate(votes_municipality = sum(votes)) |> #votes casted in each municipality 
   ungroup() |> 
   mutate(total_votes_municipality = votes_nul_blanc_total + votes_municipality) |> #total votes casted in each municipality for every row
   group_by(codigo_ccaa_pro_muni, party_collect) |> 
@@ -490,13 +296,13 @@ election_data_clean_2 <-election_data_clean |>
    slice(1) |> 
    ungroup() |> 
    left_join(cod_mun, by = c("codigo_ccaa_pro_muni" = "cod_mun")) |> 
-   select(date_elec, municipio, party, party_collect,  votes_perc_party_municipality) 
+   select(date_elec, municipio, party_collect, censo,  votes_perc_party_municipality) 
    
 q2_final_result
 
 ```
 
-### Alex - Q3 Which party was the second when the first was the PSOE? And when the first was the PP?
+### Q3 Which party was the second when the first was the PSOE? And when the first was the PP?
 
 ```{r}
 election_data_q3 <- election_data_clean_2 |> 
@@ -529,59 +335,161 @@ parties_2nd_place_after_PP <- election_data_q3 |>
   semi_join(PP_wins, by = c("date_elec", "codigo_ccaa_pro_muni")) |> 
   filter(rank == 2) |> 
   select(date_elec, municipio, party, party_collect)   
-
-final_results <- bind_rows(
-  mutate(parties_2nd_place_after_PSOE, source = "PSOE"),
-  mutate(parties_2nd_place_after_PP, source = "PP") 
-) |> 
-  rename(election_winner = source)
-
-final_results
-
 ```
 
-### Who benefits from low turnout?
-
-### 1. How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
-
-### 2. Which party was the winner in the municipalities with more than 100,000 habitants (census) in each of the elections?
-
+Barplot for if PSOE wins
 ```{r}
-election_data_clean_2 <-election_data_clean |> 
-  mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
-   group_by(codigo_ccaa_pro_muni) |>
-  mutate(votes_nul_blanc_total = votos_blancos+ votos_nulos) |> 
-  mutate(votes_municipality = sum(votes)) |> 
+ggplot(election_data_mika, 
+       aes(x = convocatorias, 
+           y = vote_share, 
+           fill = party_collect)) +
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = party_colors) +
+  labs(title = "Vote distribution", 
+       x = "Election", 
+       y = "Vote share") +
+    guides(fill = guide_legend(title = "Party"))+
+  theme_minimal()
+```
+Barplot for if PP wins
+```{r}
+ggplot(election_data_mika, 
+       aes(x = convocatorias, 
+           y = vote_share, 
+           fill = party_collect)) +
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = party_colors) +
+  labs(title = "Vote distribution", 
+       x = "Election", 
+       y = "Vote share") +
+    guides(fill = guide_legend(title = "Party"))+
+  theme_minimal()
+```
+### Q4 Who benefits from low turnout?
+```{r}
+#Create turnout column
+election_data_turnout <- election_data_clean |> 
+  group_by(codigo_municipio, anno) |> 
+  mutate(
+    turnout_pcg = round(((votos_candidaturas/censo)*100), digits = 2)) |> 
   ungroup() |> 
-  mutate(total_votes_munici = votes_nul_blanc_total + votes_municipality) |>
-  group_by(codigo_ccaa_pro_muni, party_collect) |> 
-  mutate(votes_party_municipality = votes) |> 
-  ungroup() |> 
-  mutate(votes_perc_party_municipality = (votes_party_municipality/total_votes_munici)*100) |> 
-  filter(censo >100000) |> 
-  group_by(codigo_ccaa_pro_muni) |> 
-  mutate(winner_municipality =max(votes_perc_party_municipality)) |> 
-  ungroup()
-    
-    
-  
+  mutate(
+    party_collect=party_collect.x) |> 
+  group_by(anno, party_collect) |> 
+  mutate(
+    sum_votes = sum(votes))
+
+#Low turnout dataset
+low_turnout_data <- election_data_turnout |> 
+  mutate(party_collect = party_collect.x) |> 
+  mutate(sum_votes = sum_votes) |>  # make sure sum_votes is present
+  select(anno, censo, votes, party, party_collect, turnout_pcg, sum_votes) |> 
+  filter(turnout_pcg < 50, votes > 0)
+
+
+plot_low <- ggplot(low_turnout_data, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Low turnout",
+       x = "Party",
+       y = "")+
+ theme(axis.text.y = element_blank())
+
+#High turnout database
+high_turnout_data <- election_data_turnout |> 
+  mutate(party_collect = party_collect.x) |> 
+  mutate(sum_votes = sum_votes) |>  # make sure sum_votes is present
+  select(anno, censo, votes, party, party_collect, turnout_pcg, sum_votes) |> 
+  filter(turnout_pcg >= 50, votes > 0)
+
+
+plot_high <- ggplot(high_turnout_data, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
+  geom_bar(stat = "identity") +
+  labs(title = "High turnout",
+       x = "Party",
+       y = "")+
+ theme(axis.text.y = element_blank())
+
+library(patchwork)
+
+plot_high + plot_low + plot_layout(nrow = 2)
 ```
 
-### Which party was the second when the first was the PSOE? And when the first was the PP?
-
+### Q5 Who benefits from low turnout?
 ```{r}
+#Subset with rural municipalities
+election_data_rural<- election_data_clean |> 
+  mutate(party_collect = party_collect.x) |> 
+  select(anno, censo, votes, party, party_collect) |> 
+  filter(censo < 30000, votes > 0) |> 
+  group_by(party_collect, anno) |> 
+  mutate(
+    sum_votes = sum(votes)
+  )
 
+#Subset with urban municipalities
+election_data_urban <- election_data_clean |> 
+  mutate(party_collect = party_collect.x) |> 
+  select(anno, censo, votes, party, party_collect) |> 
+  filter(censo > 30000, votes > 0) |>
+  group_by(party_collect, anno) |> 
+  mutate(
+    sum_votes = sum(votes)
+  )
+
+#Plots
+plot_rural <- ggplot(election_data_rural, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Votos por Partido en Áreas Rurales",
+       x = "Partido",
+       y = "")+
+ theme(axis.text.y = element_blank())+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot_urban <- ggplot(election_data_urban, aes(x = party_collect, y = sum_votes, fill = party_collect)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Votos por Partido en Áreas Urbanas",
+       x = "Partido",
+       y = "")+
+ theme(axis.text.y = element_blank())+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+plot_rural + plot_urban + plot_layout(nrow = 2)
 ```
 
-### Who benefits from low turnout?
+### Q6
+```{r}
+election_data_areas <- election_data_turnout |> 
+  mutate(area_type = case_when(
+    censo < 30000 ~ "Rural",
+    censo >= 30000 ~ "Urban")) |> 
+  mutate(
+    area_category = case_when(
+      turnout_pcg >= 50 & area_type == "Urban" ~ "High Turnout Urban",
+      turnout_pcg >= 50 & area_type == "Rural" ~ "High Turnout Rural",
+      turnout_pcg < 50 & area_type == "Urban" ~ "Low Turnout Urban",
+      turnout_pcg < 50 & area_type == "Rural" ~ "Low Turnout Rural"
+    )
+  )
 
-### Joining abbrev_collect
 
-## Joining survey and election data
+election_data_areas <- election_data_areas %>%
+  mutate(vote_diff = case_when(
+    area_type == "High Turnout Urban" ~ ifelse(party == "OTHER", 0.2, ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", -0.1, 0)),
+    area_type == "High Turnout Rural" ~ ifelse(party == "PSOE", 0.1, ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", -0.1, 0)),
+    area_type == "Low Turnout Urban" ~ ifelse(party == "OTHER", -0.1,ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", 0.1, 0)), 
+    area_type == "Low Turnout Rural" ~ ifelse(party == "PSOE", 0.05, ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", 0, 0))
+  ))
+```
 
-Joining survey_clean with election_data_clean using the id_join from both tables
+
+### Q7 In which election were the polls most wrong?
 
 ```{r}
+election_data_clean_red <- election_data_clean |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  filter(year(date_elec) >= 2018)
+# Joining survey_clean with election_data_clean using the id_join from both tables
 survey_elec <- election_data_clean_red |> 
   left_join(survey_clean_collect_red, by = c("id_join" = "id_join"), relationship = "many-to-many") 
 
@@ -594,31 +502,18 @@ survey_elec<- survey_elec |>
   drop_na(votes) |> 
   drop_na(vote_int)
 
-#Only for the purpose of coding 
-survey_elec_sample <- survey_elec |> 
-  slice_sample(prop =0.10)
-
-#Checking for duplicates -> many duplicates
-#duplicates_all_columns <- survey_elec_sample[duplicated(survey_elec_sample), ] 
-
 #Only keeping 1 of the duplicate rows !!! Check problem with municipality dplicates
-survey_elec_sample<-survey_elec_sample |> 
-  filter(!duplicated(survey_elec_sample))  
-
-```
-
-### In which election were the polls most wrong?
-
-```{r}
+survey_elec<-survey_elec |> 
+  filter(!duplicated(survey_elec)) 
 
 #Summing the total votes per party per election
-survey_elec_sample<-survey_elec_sample |> 
+survey_elec<-survey_elec |> 
   group_by(date_elec, party_collect) |> 
   mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
 #Summing the total votes voted per election 
-survey_elec_sample<-survey_elec_sample |> 
+survey_elec<-survey_elec |> 
    group_by(codigo_ccaa_pro_muni, date_elec)
    mutate(votes_total_blancos_nulos = votos_blancos + votos_nulos) |>
    ungroup() |> 
@@ -628,52 +523,64 @@ survey_elec_sample<-survey_elec_sample |>
    mutate(votes_elec_total = votes_total_blancos_nulos + votes_elec)
  
 #Computing a percentage of how many votes a party received compared to the total votes voted
-survey_elec_sample<-survey_elec_sample |> 
+survey_elec<-survey_elec |> 
    mutate(votes_elec_party_perc = (votes_elec_party/votes_elec_total)*100)
  
 #subtracting the voting intentions (in percentage) of the percenatage of votes gained per per party per election. 
 #As the difference can be both positive and negative, the differences in votes are squared to account for the negatives
-survey_elec_sample<-survey_elec_sample |>
+survey_elec<-survey_elec |>
   mutate(diff_vote_int = votes_elec_party_perc - vote_int) |> 
   mutate(diff_vote_int_2 =diff_vote_int^2) 
   
 #Creating the average difference between percentage of votes gained and voting intentions per election
 #Taking the squareroot to return the variable in to the orginal units
-survey_elec_sample<-survey_elec_sample |> 
+survey_elec<-survey_elec |> 
    group_by(date_elec) |> 
   mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> 
   ungroup() 
 
-#Checking in which election the polls were post wrong 
- survey_elec_sample |> 
+#Checking in which election the polls were most wrong 
+ survey_elec |> 
    distinct(avg_diff_vote_int, date_elec)
 
 ```
 
-### How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
+```{r}
+ggplot(election_data_mika, 
+       aes(x = convocatorias, 
+           y = vote_share, 
+           fill = party_collect)) +
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = party_colors) +
+  labs(title = "Vote distribution", 
+       x = "Election", 
+       y = "Vote share") +
+    guides(fill = guide_legend(title = "Party"))+
+  theme_minimal()
+```
 
-Problem: "UP_IU"
 
+### Q8 How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 ```{r}
 
 #Computing the average polling error per party per election
-survey_elec_national_sample<-survey_elec_sample |> 
+survey_elec_national<-survey_elec |> 
   filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CS "|party_collect =="MP"|party_collect =="UP_IU") |> 
   group_by(date_elec, party_collect) |> 
   mutate(avg_diff_poll = sqrt(mean(diff_vote_int_2, na.rm = TRUE)) ) |> 
   ungroup() 
 
-#Obtaining the results, note: for some parties no result
-survey_elec_national_sample |> 
+#Obtaining the results
+survey_elec_national |> 
   distinct(avg_diff_poll, date_elec, party_collect) |> 
   arrange(date_elec)
 ```
 
-### Which polling houses got it right the most and which ones deviated the most from the results?
+### Q9 Which polling houses got it right the most and which ones deviated the most from the results?
 
 ```{r}
 #Computing the average polling error per polling house per election and obtaining the minimum and maxium polling with their corresonding pollhouses per election
-survey_elec_sample<-survey_elec_sample |> 
+survey_elec<-survey_elec |> 
   group_by(id_pollster, date_elec) |> 
   mutate(avg_diff_pollhouse = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |>
   ungroup() |> 
@@ -682,36 +589,22 @@ survey_elec_sample<-survey_elec_sample |>
   mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse))
 
 #Obtaining the result for the maximum polling error
-survey_elec_sample|> 
+survey_elec|> 
   distinct(max_avg_diff_pollhouse, date_elec, id_pollster) |> 
   arrange(date_elec)
 
 #Obtaining the result for the minimum polling error
-survey_elec_sample|> 
+survey_elec|> 
   distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
   arrange(date_elec)
   
 ```
 
-## Free questions
+## Additional insights
 
-### Vote transfers (Mika)
+### Voter turnout 
 
-Election data
-
-```{r}
-
-```
-
-### Voter turnout (Frederick)
-
--   per election / per election or autonomic community (ccaa)
-
--   lollipop chart
-
-For each community voter turnouts are calculated.
-
-```{r}
+```{r Lollipop data 1}
 # Voter turnout regions
 election_data_clean_lollipop <-
   election_data_clean |> 
@@ -722,7 +615,6 @@ election_data_clean_lollipop <-
   distinct(municipio_id, mes, .keep_all = T) |> 
   select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |> 
   group_by(codigo_ccaa, mes) |> 
-
   summarise(votes_sum = sum(votes_casted),
             population_sum = sum(censo) ) |> 
   ungroup() |> 
@@ -732,7 +624,6 @@ election_data_clean_lollipop <-
 
 election_data_clean_lollipop_avg <-
   election_data_clean |> 
-
   filter(date_elec >= "2019-04-01") |> 
   mutate(votes_casted = votos_candidaturas + votos_blancos + votos_nulos) |> 
   select(-votos_blancos, -votos_candidaturas, -votos_nulos) |> 
@@ -740,7 +631,6 @@ election_data_clean_lollipop_avg <-
   distinct(municipio_id, mes, .keep_all = T) |> 
   select(municipio_id, codigo_ccaa, votes_casted, censo, mes) |>
   group_by(mes) |> 
-
   summarise(votes_sum = sum(votes_casted),
             population_sum = sum(censo) ) |>
   mutate(voter_turnout = (votes_sum / population_sum) * 100)
@@ -754,8 +644,7 @@ election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election
 
 Data manipulation for differences and factorising 'codigo_ccaa'
 
-```{r}
-# differences
+```{r Lollipop data 2}
 election_data_clean_lollipop_dif <- election_data_clean_lollipop |> 
   group_by(codigo_ccaa) |> 
   mutate(difference = voter_turnout - lag(voter_turnout, default = voter_turnout[1])) |> 
@@ -781,9 +670,9 @@ election_data_clean_lollipop$codigo_ccaa <- factor(
 
 ```
 
-Creating the lollipop graph
+lollipop graph
 
-```{r}
+```{r Lollipop graph}
 
 # for segments
 data_00 <- election_data_clean_lollipop |> 
@@ -900,23 +789,16 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
 
 ```
 
-### 
-
-### Election winners map (Frederick)
+### Election winners map
 
 #### Election Winners November 2019
 
-```{r}
-election_data_clean_abbrev <-
-  election_data_clean |> 
-  left_join(abbrev_collect, by = c("party"= "denominacion"))
-```
 
 Getting the data for first 2019 election
 
 ```{r}
 election_data_clean_red_winner_2019_b <-
-  election_data_clean_abbrev |>  
+  election_data_clean |>  
   dplyr::select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |>  
   filter(date_elec == "2019-11-01") |>  
   drop_na(votes) |>  
@@ -929,7 +811,6 @@ election_data_clean_red_winner_2019_b <-
 ```
 
 ```{r}
-
 esp_can <- esp_get_country() 
 can_prov <- esp_get_can_provinces()
 can_box <- esp_get_can_box() 
@@ -965,7 +846,7 @@ ggplot(esp_can) +
   geom_sf() +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
-  geom_sf(data = elec_winner_munic_2019a, aes(fill = party_collect), color = "black", size = 1) + 
+  geom_sf(data = elec_winner_munic_2019b, aes(fill = party_collect), color = "black", size = 1) + 
   scale_fill_manual(name = "Party", values = party_colors) + 
   theme_void() +  
   labs(title =" Election Winners by Municipality in November 2019") +  
@@ -977,13 +858,13 @@ ggplot(esp_can) +
   coord_sf()
 ```
 
-#### Facet
+#### Looking at multiple elections at a time
 
 ##### All elections since 2008
 
 ```{r}
 election_winners <-   
-  election_data_clean_abbrev |>
+  election_data_clean |>
   dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
   drop_na(votes) |>
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
@@ -991,7 +872,9 @@ election_winners <-
   mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
   ungroup() |> 
   dplyr::slice_max(n = 1, vote_share, by = c(municipio_id, date_elec)) |>
-  dplyr::select(municipio_id, vote_share, party_collect, party, anno, date_elec)  elec_winners_all_time <- munic |>
+  dplyr::select(municipio_id, vote_share, party_collect, party, anno, date_elec) 
+
+elec_winners_all_time <- munic |>
   left_join(election_winners, by = c("municipio_id" = "municipio_id"))
 ```
 
@@ -1026,7 +909,7 @@ ggplot(esp_can) +
 
 ```{r}
 election_winners_2019 <-
-  election_data_clean_abbrev |> 
+  election_data_clean |> 
   filter(anno == "2019")|>
   dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
   drop_na(votes) |>
@@ -1073,21 +956,16 @@ election_data_mika <-
 election_data_mika$party_collect<- 
 factor(election_data_mika$party_collect)
 
+
 election_data_mika<- election_data_mika |> 
+  group_by(date_elec) |>
+  mutate(TOTALvotos_poreleccion = sum(votes))|>
+  ungroup()|>
   summarise(votos_partidos = sum(votes),
             .by = c(party_collect, 
                     date_elec, 
                     TOTALvotos_poreleccion)) |> 
   na.omit()
-
-voteshare<- election_data_clean |>
-  select(c(party_collect, votes, date_elec)) |> 
-  summarise(TOTALvotos_poreleccion = sum(votes),
-            .by = c(date_elec))
-
-election_data_mika<-
-  election_data_mika |> 
-  left_join(voteshare, by = "date_elec") 
 
 election_data_mika<- election_data_mika |> 
   mutate("vote_share" = round( votos_partidos/TOTALvotos_poreleccion*100, 2)) 
@@ -1095,96 +973,23 @@ election_data_mika<- election_data_mika |>
 election_data_mika <- election_data_mika |> 
   mutate(convocatorias = format_ISO8601(date_elec, 
                                         precision = "ym"))
-
-
-
 ```
 
-## Option 1: stream
+#### Slopegraph
 
 ```{r}
-library(ggstream)
-party_colors <- c("UP_IU"="#8968CD", 
-                    "PSOE"="#CD2626",
-                    "PP"="#0055A4", 
-                    "VOX"="#5ABF35", 
-                    "BAI"="#EECFA1",
-                    "OTHER" = "#999999",
-                    "PNV" = "#008341",
-                    "EH_BILDU" = "#00D0B6",
-                    "CS" = "#FF5001",
-                    "ERC" = "#F0D85D",
-                    "BNG" = "#77B4E0",
-                    "MP" = "#02988B")
-
-
-
-election_data_mika |> 
-  ggplot(aes(x = date_elec, 
-             y = votos_partidos, 
-             fill = party_collect)) +
-  geom_stream(type = "mirror",
-              color = "white", 
-              lwd = 0.25,
-              bw = 1,
-              n_grid = 100)+
-    scale_fill_manual(values = party_colors) +
-    labs(title = "Vote Distribution", 
-         x = NULL, 
-         y = "Votes") +
-      guides(fill = guide_legend(title = "Party"))+
-  theme_void()
-
-
-```
-
-## Option 2: stacked bars
-
-```{r}
-ggplot(election_data_mika, 
-       aes(x = convocatorias, 
-           y = vote_share, 
-           fill = party_collect)) +
-  geom_bar(stat = "identity") + 
-  scale_fill_manual(values = party_colors) +
-  labs(title = "Vote distribution", 
-       x = "Election", 
-       y = "Vote share") +
-    guides(fill = guide_legend(title = "Party"))+
-  theme_minimal()
-```
-
-## Option 3: slopegraph
-
-```{r}
-install.packages("CGPfunctions")
-library(CGPfunctions)
-
 newggslopegraph(dataframe = election_data_mika,
                 Times = convocatorias,
                 Measurement = vote_share,
                 Grouping = party_collect,
                 Title = "Vote Distribution",
-                SubTitle = "Percentage share of votes per party for electrions from 2008 to 2019",
+                SubTitle = "Percentage share of votes per party for elections from 2008 to 2019",
                 LineColor = party_colors)
 
 ```
 
 ### Network analysis (Mika)
 
-```{r}
-install.packages("GGally")
-install.packages("network")
-library(GGally)
-library(network)
-install.packages("sna")
-library(sna)
-install.packages("networkD3")
-library(networkD3)
-install.packages("igraph")
-library(igraph)
-
-```
 
 ```{r}
 survey_data_mika <- survey_clean |> 
@@ -1193,18 +998,6 @@ survey_data_mika <- survey_clean |>
 
 network<- graph_from_data_frame(survey_data_mika, directed = F)
 deg <- degree(network, mode="all")
-
-plot(network, 
-     mode = "undirected",
-     layout= layout.random,
-     main="Pollster & Media network",
-     vertex.size=deg*8, 
-     vertex.shape=c("circle"),
-     vertex.color=rgb(0.1,0.7,0.8,0.5),
-     edge.width=E(network)$importance*2,
-     edge.edge.curved= FALSE)
-
-
 
 plot(network, 
      main="Pollster & Media network",
@@ -1216,6 +1009,4 @@ plot(network,
      edge.arrow.size = 0, 
      edge.arrow.width = 0, 
      edge.color = "black")
-
-
 ```
