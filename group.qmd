@@ -28,7 +28,7 @@ library(igraph)
 library(CGPfunctions)
 library(patchwork)
 library(mapSpain)
-library(patchwork)
+library(glue)
 ```
 
 ## Data
@@ -67,6 +67,9 @@ You must obligatorily answer the following questions (plus those that you consid
 -   Which polling houses got it right the most and which ones deviated the most from the results?
 
 ## Data cleaning
+
+First, we clean data according to the principles of tidy data. These data frames are the basis for our subsequent operations.
+
 ### Election data
 
 ```{r Data cleaning election data}
@@ -138,7 +141,6 @@ abbrev_test <- abbrev |>
     distinct(denominacion, .keep_all = TRUE)
 ```
 
-
 ### Survey data
 
 ```{r Survey data cleaning}
@@ -155,7 +157,11 @@ survey_clean <- surveys |>
 ```
 
 ### Joining tables
+
+Now, we join tables. The abbreviations are joined to the election data and the survey data so we have the party denomination, as coded in the abbreviations table for the election and survey data.
+
 #### Joining abbrev_collect and election data
+
 ```{r}
 election_data_clean <- election_data_clean |> 
   left_join(abbrev_collect, by = c("party" = "denominacion"))
@@ -194,24 +200,7 @@ abbrev_collect<- abbrev_collect |>
   select(-siglas)
 ```
 
-#### Creating ID
-
-Creating an ID to match the election_data table
-
-```{r}
-survey_clean_collect_red <- survey_clean_collect_red |> 
-  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-```
-### Joining abbrev_collect
-
-```{r}
-election_data_clean <- election_data_clean |> 
-  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-```
-
 ### Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
-
-Compare total number of votes of the national parties (PSOE, PP, VOX, CS, MP, UP - IU) against the other parties of focus.
 
 ```{r}
  national_parties <- c("PSOE", "PP", "VOX", "CS", "MP", "UP_IU")
@@ -258,6 +247,7 @@ graph_data <- election_data_q1 |>
 ```
 
 Creating the plot.
+
 ```{r}
 ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = party_type, group = party_type)) +
   geom_line() +
@@ -305,6 +295,8 @@ ggplot(q2_final_result,
   facet_wrap(~date_elec, scales = "free_x")
 ```
 
+Interestingly, in election where the PP won, it also won the most populous municipalities after the party system shifted away from the traditional two-party system.
+
 ### Q3 Which party was the second when the first was the PSOE? And when the first was the PP?
 
 ```{r}
@@ -340,7 +332,8 @@ parties_2nd_place_after_PP <- election_data_q3 |>
   select(date_elec, municipio, party, party_collect)   
 ```
 
-Barplot for if PSOE wins
+This barplot illustrates the second place finisher for municipalities where the PSOE won.
+
 ```{r}
 ggplot(parties_2nd_place_after_PSOE, 
        aes(x =party_collect))+
@@ -352,7 +345,9 @@ ggplot(parties_2nd_place_after_PSOE,
     guides(fill = guide_legend(title = "Party")) +
   theme_classic()
 ```
-Barplot for if PP wins
+
+This barplot illustrates the second place finisher for municipalities where the PP won.
+
 ```{r}
 ggplot(parties_2nd_place_after_PP, 
        aes(x =party_collect))+
@@ -364,7 +359,37 @@ ggplot(parties_2nd_place_after_PP,
     guides(fill = guide_legend(title = "Party")) +
   theme_classic()
 ```
+
+We now only read out the party that has come in second the most often when the PSOE has won using the glue package.
+
+```{r}
+second_place_party_PSOE <- 
+  parties_2nd_place_after_PSOE |> 
+  count(party_collect, name = "Party_Count") |> 
+  filter(Party_Count == max(Party_Count)) |> 
+  pull(party_collect)
+
+PSOE <- glue("The party that has come in 2nd most often when the PSOE has won a municipality is {second_place_party_PSOE}.")
+
+# Print the outcome
+print(PSOE)
+```
+
+```{r}
+second_place_party_PP <- 
+  parties_2nd_place_after_PP |> 
+  count(party_collect, name = "Party_Count") |> 
+  filter(Party_Count == max(Party_Count)) |> 
+  pull(party_collect)
+
+PP <- glue("The party that has come in 2nd most often when the PP has won a municipality is {second_place_party_PP}.")
+
+# Print the outcome
+print(PP)
+```
+
 ### Q4 Who benefits from low turnout?
+
 ```{r}
 #Create turnout column
 election_data_turnout <- election_data_clean |>  
@@ -399,6 +424,7 @@ ggplot(low_turnout_data, aes(x = party_collect)) +
 Historically, since 2008, in low turnout elections, smaller parties have had a higher chance of winning the election.
 
 ### Q5 How to analyze the relationship between census and vote? Is it true that certain parties win in rural areas?
+
 ```{r}
 #Subset with rural municipalities and their winners
 election_winners_rural<- election_data_clean |>  
@@ -420,13 +446,25 @@ ggplot(election_winners_rural, aes(x = party_collect)) +
        y = "Count")+
   theme_classic()
 ```
+
 As may be expected, the PP is most successful in elections in rural areas.
 
 ### Q6 How to calibrate the error of the polls (remember that the polls are voting intentions at national level)?
+
+Creating an ID in both the survey data table and the election data table to match the two.
+
+```{r}
+survey_clean_collect_red <- survey_clean_collect_red |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
+
+election_data_clean <- election_data_clean |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
+```
+
+
 ```{r}
 
 ```
-
 
 ### Q7 In which election were the polls most wrong?
 
@@ -504,8 +542,8 @@ ggplot(election_data_mika,
   theme_minimal()
 ```
 
-
 ### Q8 How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
+
 ```{r}
 
 #Computing the average polling error per party per election
@@ -547,7 +585,7 @@ survey_elec|>
 
 ## Additional insights
 
-### Voter turnout 
+### Voter turnout
 
 ```{r Lollipop data 1}
 # Voter turnout regions
@@ -738,7 +776,6 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
 ### Election winners map
 
 #### Election Winners November 2019
-
 
 Getting the data for first 2019 election
 
@@ -936,7 +973,6 @@ newggslopegraph(dataframe = election_data_mika,
 ```
 
 ### Network analysis (Mika)
-
 
 ```{r}
 survey_data_mika <- survey_clean |> 
