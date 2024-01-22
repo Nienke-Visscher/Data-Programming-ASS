@@ -1,6 +1,6 @@
 ---
 title: "Group Task"
-author: "Alexandra Salo (Student ID: 100508332), Rosalía (DNI: 00000000-X), ..."
+author: "Rianne Nienke Visscher (Student ID: 100514861), Frederick Pena Sims (Student ID: 100506380),Alexandra Salo (Student ID: 100508332), Mikaela DeSmedt (Student ID: 100481838), Alicia Talavera Marcos (Student ID: 100508665)"
 format:
   html:
     theme: [style.scss]
