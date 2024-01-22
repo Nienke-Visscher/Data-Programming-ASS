@@ -18,6 +18,7 @@ editor_options:
 
 ```{r Libraries}
 #| echo: true
+#| output: false
 
 rm(list = ls())
 library(tidyverse)
@@ -28,8 +29,6 @@ library(igraph)
 library(CGPfunctions)
 library(patchwork)
 library(mapSpain)
-
-
 library(glue)
 
 
@@ -41,6 +40,7 @@ The practice will be based on the **electoral data archives** that we have alrea
 
 ```{r Data}
 #| echo: true
+#| output: false
 
 election_data <- read_csv(file = "datos_elecciones_brutos.csv")
 cod_mun <- read_csv(file = "cod_mun.csv")
@@ -70,11 +70,11 @@ You must obligatorily answer the following questions (plus those that you consid
 -   How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 -   Which polling houses got it right the most and which ones deviated the most from the results?
 
-## Data cleaning
+### Data cleaning
 
 First, we clean data according to the principles of tidy data. These data frames are the basis for our subsequent operations.
 
-### Election data
+#### Election data
 
 ```{r Data cleaning election data}
 election_data_clean <- election_data |> 
@@ -89,7 +89,7 @@ election_data_clean<-election_data_clean|>
   mutate(votes = ifelse(is.na(votes), 0, votes)) #changing all NA values to 0, as we expect that the data set misinterprets 0s as NA
 ```
 
-### Abbrev data
+#### Abbrev data
 
 ```{r Data cleaning abbrev data}
 distinct_parties <- election_data_clean |>  
@@ -145,7 +145,7 @@ abbrev_test <- abbrev |>
     distinct(denominacion, .keep_all = TRUE)
 ```
 
-### Survey data
+#### Survey data
 
 ```{r Survey data cleaning}
 survey_clean <- surveys |> 
@@ -161,7 +161,7 @@ survey_clean <- surveys |>
   mutate(vote_int = ifelse(is.na(vote_int), 0, vote_int))
 ```
 
-### Joining tables
+#### Joining tables
 
 Now, we join tables. The abbreviations are joined to the election data and the survey data so we have the party denomination, as coded in the abbreviations table for the election and survey data.
 
@@ -204,6 +204,8 @@ survey_clean_collect_red <- survey_clean_collect |>
 abbrev_collect<- abbrev_collect |> 
   select(-siglas)
 ```
+
+## Questions
 
 ### Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
