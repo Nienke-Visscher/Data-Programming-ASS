@@ -1,10 +1,10 @@
 ---
-title: "Slay-presentation"
+title: "Group presentation"
 date: 2024-01-24
-author: "test"
+author: "Frederick, Nienke, Mika, Alex, Alicia"
 format: 
   revealjs:
-    theme: beige
+    theme: simple
     transition: slide
     transition-speed: fast
     embed-resources: TRUE
@@ -14,7 +14,7 @@ logo: https://www.rstudio.com/wp-content/uploads/2018/10/RStudio-Logo-Flat.png
 ---
 
 ```{r Libraries}
-#| echo: true
+#| echo: false
 
 rm(list = ls())
 library(tidyverse)
@@ -29,7 +29,7 @@ library(glue)
 ```
 
 ```{r Data}
-#| echo: true
+#| echo: false
 
 election_data <- read_csv(file = "datos_elecciones_brutos.csv")
 cod_mun <- read_csv(file = "cod_mun.csv")
@@ -255,7 +255,7 @@ graph_data <- election_data_q1 |>
   distinct(party_type, votes_elec_party_perc) 
 ```
 
-##Q1 Visualisation
+## Q1 Visualisation
 
 ```{r}
 #| output-location: column-fragment
@@ -422,7 +422,8 @@ print(PP)
 Who benefits from low turnout?
 
 ```{r}
-# | echo: true
+#| echo: true
+
 #Create turnout column
 election_data_turnout <- election_data_clean |>  
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
@@ -441,7 +442,7 @@ low_turnout_winners <- election_data_turnout |>
   select(vote_share, party, party_collect)
 ```
 
-##Q4 Visualisation
+## Q4 Visualisation
 
 Historically, since 2008, in low turnout elections, smaller parties have had a higher chance of winning the election.
 
@@ -498,10 +499,9 @@ ggplot(election_winners_rural, aes(x = party_collect)) +
 
 How to calibrate the error of the polls (remember that the polls are voting intentions at national level)?
 
-Creating an ID in both the survey data table and the election data table to match the two.
-
 ```{r}
-# |echo: true
+#| echo: true
+
 survey_clean_collect_red <- survey_clean_collect_red |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 
@@ -509,8 +509,10 @@ election_data_clean <- election_data_clean |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
+## Q6 II
 ```{r}
-# | echo: true
+#| echo: true
+
 election_data_clean_red <- election_data_clean |> 
   select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
   mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
@@ -566,10 +568,12 @@ survey_elec<-survey_elec |>
   
 ```
 
-## Q7 In which election were the polls most wrong?
+## Q7
+In which election were the polls most wrong?
 
 ```{r}
-# | echo: true
+#| echo: true
+
 #Checking in which election the polls were most wrong 
 survey_elec_result<- survey_elec |> 
    distinct(avg_diff_vote_int, date_elec)
@@ -584,7 +588,7 @@ survey_elec_result<- survey_elec_result |>
 ## Q7 Visualisation
 
 ```{r}
-# | output-location: fragment
+#| output-location: fragment
 ggplot(survey_elec_result, aes(x = date_elec_factor, y = avg_diff_vote_int)) +
   geom_col() +
   labs(title = "Error in election polls per election", 
@@ -598,6 +602,8 @@ ggplot(survey_elec_result, aes(x = date_elec_factor, y = avg_diff_vote_int)) +
 How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 
 ```{r}
+#| echo: true
+
 #Computing the average polling error per party per election
 survey_elec_national<-survey_elec |> 
   filter(party_collect == "PSOE"|party_collect == "PP"|party_collect =="VOX"|party_collect =="CS "|party_collect =="MP"|party_collect =="UP_IU") |> 
@@ -605,16 +611,29 @@ survey_elec_national<-survey_elec |>
   mutate(avg_diff_poll = sqrt(mean(diff_vote_int_2, na.rm = TRUE)) ) |> 
   ungroup() 
 
+```
+
+## Q8 II
+```{r}
+#| output: true
+#| echo: true
+
 #Obtaining the results
 survey_elec_national |> 
   distinct(avg_diff_poll, date_elec, party_collect) |> 
   arrange(date_elec)
+
+survey_elec_national<-survey_elec_national |> 
+  mutate(date_elec_factor = as.character(date_elec))
 ```
+
+
 
 ## Q8 Visualisation
 
 ```{r}
 # | output-location: column
+
 ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = date_elec_factor)) +
   geom_col(position = "dodge") +
   labs(title = "Error in election polls per party", 
@@ -630,35 +649,59 @@ Which polling houses got it right the most and which ones deviated the most from
 
 ```{r}
 #| echo: true
-#Computing the average polling error per polling house per election and obtaining the minimum and maxium polling with their corresonding pollhouses per election
+
+
+#Computing the average polling error per polling house per election and obtaining the minimum and maximum polling with their corresponding pollhouses per election
 survey_elec<-survey_elec |> 
   group_by(id_pollster, date_elec) |> 
   mutate(avg_diff_pollhouse = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |>
   ungroup() |> 
-  group_by(date_elec) |> 
-  mutate(max_avg_diff_pollhouse = max(avg_diff_pollhouse)) |> 
-  mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse))
+  drop_na(avg_diff_pollhouse)
 
 #Obtaining the result for the maximum polling error
-survey_elec|> 
-  distinct(max_avg_diff_pollhouse, date_elec, id_pollster) |> 
-  arrange(date_elec)
+result_max<-survey_elec|> 
+  group_by(date_elec) |>
+  filter(avg_diff_pollhouse == max(avg_diff_pollhouse)) |> 
+  distinct(avg_diff_pollhouse, id_pollster, date_elec) 
 
-#Obtaining the result for the minimum polling error
-survey_elec|> 
-  distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
-  arrange(date_elec)
-  
+
 ```
 
-## Additional insights
+## Q9
 
--   Present insightful visualisations
+```{r}
+#| output: true
+
+result_max
+```
+
+
+## Q9 II
+```{r}
+#| echo: true
+#| output: true
+
+
+#Obtaining the result for the maximum polling error
+result_min<-survey_elec|> 
+  group_by(date_elec) |>
+  filter(avg_diff_pollhouse == min(avg_diff_pollhouse)) |> 
+  distinct(avg_diff_pollhouse, id_pollster, date_elec) 
+
+result_min
+```
+
+
+
+# Additional insights
+
+
 
 ## Voter turnout: Regions
 
 ```{r Lollipop data 1}
-# | echo: true
+#| echo: true
+
 # Voter turnout regions
 election_data_clean_lollipop <-
   election_data_clean |> 
@@ -681,7 +724,7 @@ election_data_clean_lollipop <-
 ## Voter turnout: Spain
 
 ```{r}
-# | echo: true
+#| echo: true
 
 # Voter turnout Spain
 election_data_clean_lollipop_avg <-
@@ -706,7 +749,8 @@ election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election
 ## Lolipop graph data preperation I
 
 ```{r Lollipop data 2}
-# | echo: true
+#| echo: true
+
 # ordering codigo variable for subsequent plot
 max_turnout_mes04 <- election_data_clean_lollipop |> 
   filter(mes == "04") |> 
@@ -728,7 +772,8 @@ election_data_clean_lollipop$codigo_ccaa <- factor(
 ## Lollipop graph data preperation II
 
 ```{r Lollipop graph}
-# | echo: true
+#| echo: true
+
 # for segments
 data_00 <- election_data_clean_lollipop |> 
   filter(codigo_ccaa == "00")
@@ -783,7 +828,8 @@ election_data_clean_lollipop_dif <- election_data_clean_lollipop |>
 ## Lollipop graph - voter turnout differences
 
 ```{r}
-# | output-location: slide
+#| output-location: slide
+
 ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, group= mes), size = 2) + 
   geom_point(aes(color = mes)) +
   labs(title = "Difference in Voter Turnout\nby Region (April vs. November 2019)",
@@ -852,7 +898,8 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
 Data preperation.
 
 ```{r}
-# | echo: true
+#| echo: true
+
 election_data_clean_red_winner_2019_b <-
   election_data_clean |>  
   dplyr::select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |>  
@@ -871,7 +918,8 @@ election_data_clean_red_winner_2019_b <-
 Merging with geospatial data.
 
 ```{r}
-# | echo: true
+#| echo: true
+
 esp_can <- esp_get_country() 
 can_prov <- esp_get_can_provinces()
 can_box <- esp_get_can_box() 
@@ -892,7 +940,23 @@ elec_winner_munic_2019b <- munic |>
 ## Map Election Winners in November 2019
 
 ```{r}
-# | output-location: slide
+#| output-location: slide
+
+# party colors
+party_colors <- c("UP_IU"="#8968CD",  
+                  "PSOE"="#CD2626",
+                  "PP"="#0055A4", 
+                  "VOX"="#5ABF35", 
+                  "BAI"="#EECFA1",
+                  "OTHER" = "#999999", 
+                  "PNV" = "#008341", 
+                  "EH_BILDU" = "#00D0B6", 
+                  "CS" = "#FF5001",      
+                  "ERC" = "#F0D85D",    
+                  "BNG" = "#77B4E0",  
+                  "MP" = "#02988B") 
+
+
 ggplot(esp_can) +
   geom_sf() +
   geom_sf(data = can_prov) +
@@ -913,7 +977,8 @@ ggplot(esp_can) +
 
 Data preperation.
 ```{r}
-# |echo: true
+#| echo: true
+
 election_winners <-   
   election_data_clean |>
   dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
@@ -932,7 +997,8 @@ elec_winners_all_time <- munic |>
 ## Mapping all elections since 2008
 
 ```{r}
-# | output-location: slide
+#| output-location: slide
+
 election_names <-
   as_labeller(c(
     '2008-03-01'="March 2008",
@@ -963,6 +1029,7 @@ ggplot(esp_can) +
 Data preperation.
 ```{r}
 #| echo: true
+
 election_winners_2019 <-
   election_data_clean |> 
   filter(anno == "2019")|>
@@ -982,7 +1049,8 @@ elec_winners_2019 <-
 
 ## Mapping the 2019 Elections
 ```{r}
-# | output-location: slide
+#| output-location: slide
+
 election_names <- as_labeller(c(
   '2019-04-01'="April 2019",
   '2019-11-01'="November 2019" 
@@ -1007,7 +1075,8 @@ ggplot(esp_can) +
 ## Vote distribution
 
 ```{r}
-# | echo: true
+#| echo: true
+
 election_data_mika <- 
   election_data_clean |> 
   select(c(party_collect, votes, date_elec)) 
@@ -1038,7 +1107,7 @@ election_data_mika <- election_data_mika |>
 ## Slopegraph
 
 ```{r}
-# | output-location: slide
+#| output-location: slide
 
 newggslopegraph(dataframe = election_data_mika,
                 Times = convocatorias,
@@ -1053,7 +1122,7 @@ newggslopegraph(dataframe = election_data_mika,
 ## Network analysis
 
 ```{r}
-# | echo: true
+#| echo: true
 survey_data_mika <- survey_clean |> 
   distinct(date_elec, pollster, media) |> 
   select(-date_elec)
@@ -1063,7 +1132,7 @@ deg <- degree(network, mode="all")
 ```
 
 ```{r}
-# | output-location: slide
+#| output-location: slide
 plot(network, 
      main="Pollster & Media network",
      layout= layout_nicely,
