@@ -551,6 +551,8 @@ ggplot(survey_elec_result, aes(x = date_elec_factor, y = avg_diff_vote_int)) +
 
 ```
 
+The polls of the election in April 2019 were slightly more mistaken than in the November election.
+
 ### Q8 How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
 
 ```{r}
@@ -581,6 +583,7 @@ ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = da
   theme_minimal()
 
 ```
+The polling error are largest in both elections for the party PSOE and smallest for the party UP_IU. The polling errors per party are highly similar for both elections.
 
 ### Q9 Which polling houses got it right the most and which ones deviated the most from the results?
 
@@ -592,28 +595,25 @@ survey_elec<-survey_elec |>
   ungroup() |> 
   drop_na(avg_diff_pollhouse)
 
-survey_elec<-survey_elec |> 
-  group_by(date_elec) |> 
-  mutate(max_avg_diff_pollhouse = max(avg_diff_pollhouse)) |> 
-  mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse)) |> 
-  ungroup()
-
 #Obtaining the result for the maximum polling error
 result_max<-survey_elec|> 
-  distinct(max_avg_diff_pollhouse, date_elec, id_pollster) |> 
-  arrange(date_elec)
+  group_by(date_elec) |>
+  filter(avg_diff_pollhouse == max(avg_diff_pollhouse)) |> 
+  distinct(avg_diff_pollhouse, id_pollster, date_elec) 
 
 result_max
 
-
-#Obtaining the result for the minimum polling error
+#Obtaining the result for the maximum polling error
 result_min<-survey_elec|> 
-  distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
-  arrange(date_elec)
+  group_by(date_elec) |>
+  filter(avg_diff_pollhouse == min(avg_diff_pollhouse)) |> 
+  distinct(avg_diff_pollhouse, id_pollster, date_elec) 
 
 result_min
   
 ```
+The polling houses in the results_max table are the polling houses with the minimum polling error for the elections of April and November and the results_min table, the polling houses with the smallest error for these two elections.
+
 
 ## Additional insights
 
