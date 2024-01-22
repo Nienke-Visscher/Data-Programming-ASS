@@ -1,21 +1,30 @@
 ---
 title: "Slay-presentation"
-format: revealjs
+date: 2024-01-24
+author: "test"
+format: 
+  revealjs:
+    theme: beige
+    transition: slide
+    transition-speed: fast
+    embed-resources: TRUE
+    slide-number: c/t
 editor: visual
+logo: https://www.rstudio.com/wp-content/uploads/2018/10/RStudio-Logo-Flat.png
 ---
 
-## Quarto
+## Slide 1
 
 Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
 
-## Bullets
+## Slide 2
 
 When you click the **Render** button a document will be generated that includes:
 
 -   Content authored with markdown
 -   Output from executable code
 
-## Code
+## Slide 3
 
 When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
 
@@ -24,3 +33,19 @@ When you click the **Render** button a presentation will be generated that inclu
 ```
 
 This is the presentation!!
+
+# Slide 4
+
+::: columns
+::: {.column width="50%"}
+```{r}
+
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+
+```
+:::
+:::
