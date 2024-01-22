@@ -214,7 +214,6 @@ survey_clean_collect_red <- survey_clean_collect_red |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
-
 ```{r}
 election_data_clean <- election_data_clean |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
@@ -481,13 +480,6 @@ election_data_clean <- election_data_clean |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
-
-```{r}
-
-```
-
-### Q7 In which election were the polls most wrong?
-
 ```{r}
 
 election_data_clean_red <- election_data_clean |> 
@@ -544,7 +536,6 @@ survey_elec<-survey_elec |>
   ungroup()
 
 ```
-
 
 ### Q7 In which election were the polls most wrong?
 
@@ -604,7 +595,6 @@ ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = da
   theme_minimal()
 
 ```
-
 
 ### Q9 Which polling houses got it right the most and which ones deviated the most from the results?
 
