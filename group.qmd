@@ -482,14 +482,8 @@ election_data_clean <- election_data_clean |>
 ```
 
 
+### Q6
 ```{r}
-
-```
-
-### Q7 In which election were the polls most wrong?
-
-```{r}
-
 election_data_clean_red <- election_data_clean |> 
   select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
   mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
@@ -550,6 +544,14 @@ survey_elec<-survey_elec |>
 
 ```{r}
  
+
+
+```
+
+
+### Q7 In which election were the polls most wrong?
+
+```{r}
 
 #Checking in which election the polls were most wrong 
 survey_elec_result<- survey_elec |> 
