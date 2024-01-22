@@ -205,20 +205,6 @@ abbrev_collect<- abbrev_collect |>
   select(-siglas)
 ```
 
-#### Creating ID for matching the election data and survey data
-
-Creating an ID to match the election_data table
-
-```{r}
-survey_clean_collect_red <- survey_clean_collect_red |> 
-  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-```
-
-```{r}
-election_data_clean <- election_data_clean |> 
-  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
-```
-
 ### Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
 
 ```{r}
@@ -429,7 +415,7 @@ low_turnout_winners <- election_data_turnout |>
   dplyr::slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
   select(vote_share, party, party_collect)
 
-ggplot(low_turnout_data, aes(x = party_collect)) +
+ggplot(low_turnout_winners, aes(x = party_collect)) +
   geom_bar(stat = "count") +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
   labs(title = "Number of Municipalities Won by Party in Low Turnout Elections",
@@ -440,7 +426,7 @@ ggplot(low_turnout_data, aes(x = party_collect)) +
   theme_classic()
 ```
 
-Historically, since 2008, in low turnout elections, smaller parties have had a higher chance of winning the election.
+Historically, since 2008, in low turnout elections, smaller parties have had a higher chance of winning the election. Nonetheless, the PP dominates these low turnout elections, with the PSOE considerably lagging behind. This can be attributed to the more consistent electorate of the conservative PP casting votes more reliable.
 
 ### Q5 How to analyze the relationship between census and vote? Is it true that certain parties win in rural areas?
 
@@ -480,13 +466,14 @@ election_data_clean <- election_data_clean |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
+Following, the average difference between percentage of votes gained and voting intentions per election is calculated. For that the survey data set and election data set are merged.
+
 ```{r}
 
 election_data_clean_red <- election_data_clean |> 
   select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
   mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
   filter(year(date_elec) >= 2018)
-
 
 #Summing the total votes per party per election
 election_data_clean_red<-election_data_clean_red |> 
@@ -539,15 +526,14 @@ survey_elec<-survey_elec |>
 
 ### Q7 In which election were the polls most wrong?
 
-```{r}
- 
+Using the previously calculated difference between votes gained and intentions to vote, a distinct function is applied 
 
+```{r}
 #Checking in which election the polls were most wrong 
 survey_elec_result<- survey_elec |> 
    distinct(avg_diff_vote_int, date_elec)
 
 survey_elec_result
-
 ```
 
 ```{r}
@@ -631,7 +617,11 @@ result_min
 
 ## Additional insights
 
-### Voter turnout
+### How did the voter turnout change in the two elections in 2019?
+
+Following, a graph will display the change in voter turnout across the two elections with a so-called lollipop graph. Differences are calculated and plotted per community and across the whole of Spain.
+
+The subsequent chunk creates a joint data for the two elections in 2019 of voter turnout in the communities and the whole of Spain.
 
 ```{r Lollipop data 1}
 # Voter turnout regions
@@ -671,15 +661,9 @@ election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election
 
 ```
 
-Data manipulation for differences and factorising 'codigo_ccaa'
+The delineating the communities is factorised using forcats so it orders the community according to their voter turnout. The results are pulled into a string, which then supplies the information on the order.
 
 ```{r Lollipop data 2}
-election_data_clean_lollipop_dif <- election_data_clean_lollipop |> 
-  group_by(codigo_ccaa) |> 
-  mutate(difference = voter_turnout - lag(voter_turnout, default = voter_turnout[1])) |> 
-  ungroup() |> 
-  filter(mes == "11")
-
 # ordering codigo variable for subsequent plot
 max_turnout_mes04 <- election_data_clean_lollipop |> 
   filter(mes == "04") |> 
@@ -700,7 +684,7 @@ election_data_clean_lollipop$codigo_ccaa <- factor(
 
 ```
 
-lollipop graph
+To connect the dots delineating the voter turnout data frames for each difference is calculated, as well as the numerical values of the differences. Then the graph is created.
 
 ```{r Lollipop graph}
 
@@ -746,10 +730,12 @@ data_18 <- election_data_clean_lollipop |>
 data_19 <- election_data_clean_lollipop |> 
   filter(codigo_ccaa == "19")
 
-# for differently colored Spain label
-label_Spain <- election_data_clean_lollipop |> 
-  filter(codigo_ccaa =="00") |> 
-  mutate(codigo_ccaa = as.character(codigo_ccaa))
+# creating 
+election_data_clean_lollipop_dif <- election_data_clean_lollipop |> 
+  group_by(codigo_ccaa) |> 
+  mutate(difference = voter_turnout - lag(voter_turnout, default = voter_turnout[1])) |> 
+  ungroup() |> 
+  filter(mes == "11")
 
 
 
@@ -819,11 +805,17 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
 
 ```
 
-### Election winners map
+### Who won which municipality and how did it change over the years?
 
-#### Election Winners November 2019
+To answer this question, several maps are created illustrating the winner of each municipality.
 
-Getting the data for first 2019 election
+#### Election Winners in November 2019
+
+To start off, we take a look at the most recent election represented in the data frame.
+
+First, the data of election winners is extracted. Using the package mapSpain, this data frame is joined to a data frame containing geospatial information. Subsquently, the map is plotted.
+
+We can see that the conservative PP was able, despite defeat to reasonably well defend its strongholds in the north, while the social democratic PSOE swept across the South.
 
 ```{r}
 election_data_clean_red_winner_2019_b <-
@@ -888,9 +880,9 @@ ggplot(esp_can) +
   coord_sf()
 ```
 
-#### Looking at multiple elections at a time
+#### All elections since 2008
 
-##### All elections since 2008
+Now, a plot mapping the winners in all municiaplities in all elections since 2008 is shown by using a facet wrap.
 
 ```{r}
 election_winners <-   
@@ -909,7 +901,6 @@ elec_winners_all_time <- munic |>
 ```
 
 ```{r}
-
 election_names <-
   as_labeller(c(
     '2008-03-01'="March 2008",
@@ -935,7 +926,9 @@ ggplot(esp_can) +
   facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
 
-##### 2019 elections
+#### The 2019 Elections
+
+Finally, we return to the two elections in 2019 to see how the short amount of time in between elections influenced the results across municipalities.
 
 ```{r}
 election_winners_2019 <-
@@ -975,7 +968,9 @@ ggplot(esp_can) +
   facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
 
-### Vote distribution
+### From a two-party system to a multi-party system
+
+In this section, we show the change of the Spanish party system, from a system dominated by two parties to a multi-party system. We show this by creating a slopegraph, indicating the vote share of every major party in every election since 2008.
 
 ```{r}
 election_data_mika <- 
@@ -1005,8 +1000,6 @@ election_data_mika <- election_data_mika |>
                                         precision = "ym"))
 ```
 
-#### Slopegraph
-
 ```{r}
 newggslopegraph(dataframe = election_data_mika,
                 Times = convocatorias,
@@ -1018,7 +1011,9 @@ newggslopegraph(dataframe = election_data_mika,
 
 ```
 
-### Network analysis (Mika)
+### Who uses which polling provider?
+
+With our final question we wanted to know which media outlet uses which polling station. To visualize this, we create a network pitting collaborators visually against each other.
 
 ```{r}
 survey_data_mika <- survey_clean |> 
