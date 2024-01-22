@@ -459,33 +459,6 @@ plot_rural + plot_urban + plot_layout(nrow = 2)
 
 ### Q6
 ```{r}
-election_data_areas <- election_data_turnout |> 
-  mutate(area_type = case_when(
-    censo < 30000 ~ "Rural",
-    censo >= 30000 ~ "Urban")) |> 
-  mutate(
-    area_category = case_when(
-      turnout_pcg >= 50 & area_type == "Urban" ~ "High Turnout Urban",
-      turnout_pcg >= 50 & area_type == "Rural" ~ "High Turnout Rural",
-      turnout_pcg < 50 & area_type == "Urban" ~ "Low Turnout Urban",
-      turnout_pcg < 50 & area_type == "Rural" ~ "Low Turnout Rural"
-    )
-  )
-
-
-election_data_areas <- election_data_areas %>%
-  mutate(vote_diff = case_when(
-    area_type == "High Turnout Urban" ~ ifelse(party == "OTHER", 0.2, ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", -0.1, 0)),
-    area_type == "High Turnout Rural" ~ ifelse(party == "PSOE", 0.1, ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", -0.1, 0)),
-    area_type == "Low Turnout Urban" ~ ifelse(party == "OTHER", -0.1,ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", 0.1, 0)), 
-    area_type == "Low Turnout Rural" ~ ifelse(party == "PSOE", 0.05, ifelse(party %in% c("PP", "PSOE") | party == "UP_IU", 0, 0))
-  ))
-```
-
-
-### Q7 In which election were the polls most wrong?
-
-```{r}
 election_data_clean_red <- election_data_clean |> 
   select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
   filter(year(date_elec) >= 2018)
@@ -538,6 +511,14 @@ survey_elec<-survey_elec |>
    group_by(date_elec) |> 
   mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> 
   ungroup() 
+
+
+```
+
+
+### Q7 In which election were the polls most wrong?
+
+```{r}
 
 #Checking in which election the polls were most wrong 
  survey_elec |> 
