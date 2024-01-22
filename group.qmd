@@ -28,7 +28,11 @@ library(igraph)
 library(CGPfunctions)
 library(patchwork)
 library(mapSpain)
+
+
 library(glue)
+
+
 ```
 
 ## Data
@@ -153,7 +157,8 @@ survey_clean <- surveys |>
   filter(field_days>0) |> #Filtering cases with field days >0
   pivot_longer(cols ="UCD":"EV", #Pivoting to make tidy data
                names_to = "party",
-               values_to = "vote_int")
+               values_to = "vote_int") |> 
+  mutate(vote_int = ifelse(is.na(vote_int), 0, vote_int))
 ```
 
 ### Joining tables
@@ -198,6 +203,21 @@ survey_clean_collect_red <- survey_clean_collect |>
 # removing siglas not to confuse with party_collect
 abbrev_collect<- abbrev_collect |> 
   select(-siglas)
+```
+
+#### Creating ID for matching the election data and survey data
+
+Creating an ID to match the election_data table
+
+```{r}
+survey_clean_collect_red <- survey_clean_collect_red |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
+```
+
+
+```{r}
+election_data_clean <- election_data_clean |> 
+  mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
 ### Q1 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
@@ -469,46 +489,47 @@ election_data_clean <- election_data_clean |>
 ### Q7 In which election were the polls most wrong?
 
 ```{r}
+
 election_data_clean_red <- election_data_clean |> 
-  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_blancos, -votos_nulos, -votos_candidaturas) |> 
+  select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_candidaturas) |> 
+  mutate(codigo_ccaa_pro_muni = paste(codigo_ccaa, codigo_provincia, codigo_municipio, sep = "-")) |> 
   filter(year(date_elec) >= 2018)
-# Joining survey_clean with election_data_clean using the id_join from both tables
-survey_elec <- election_data_clean_red |> 
-  left_join(survey_clean_collect_red, by = c("id_join" = "id_join"), relationship = "many-to-many") 
 
-survey_elec<- survey_elec |> 
-  mutate(party_collect =party_collect.x) |> 
-  select( -party_collect.x) |> 
-  mutate(date_elec = date_elec.x) |> 
-  mutate(date_elec_survey = date_elec.y) |> 
-  select(-date_elec.x, -date_elec.y) |> 
-  drop_na(votes) |> 
-  drop_na(vote_int)
-
-#Only keeping 1 of the duplicate rows !!! Check problem with municipality dplicates
-survey_elec<-survey_elec |> 
-  filter(!duplicated(survey_elec)) 
 
 #Summing the total votes per party per election
-survey_elec<-survey_elec |> 
+election_data_clean_red<-election_data_clean_red |> 
   group_by(date_elec, party_collect) |> 
   mutate(votes_elec_party = sum(votes)) |> 
   ungroup() 
  
 #Summing the total votes voted per election 
-survey_elec<-survey_elec |> 
-   group_by(codigo_ccaa_pro_muni, date_elec)
+election_data_clean_red<-election_data_clean_red |> 
+   group_by(codigo_ccaa_pro_muni, date_elec) |> 
    mutate(votes_total_blancos_nulos = votos_blancos + votos_nulos) |>
    ungroup() |> 
    group_by(date_elec) |> 
-   mutate(votes_elec = sum(votes_total)) |> 
+   mutate(votes_total_blancos_nulos = sum (votes_total_blancos_nulos)) |> 
+   mutate(votes_elec = sum(votes)) |> 
    ungroup() |> 
    mutate(votes_elec_total = votes_total_blancos_nulos + votes_elec)
  
 #Computing a percentage of how many votes a party received compared to the total votes voted
-survey_elec<-survey_elec |> 
+election_data_clean_red<-election_data_clean_red |> 
    mutate(votes_elec_party_perc = (votes_elec_party/votes_elec_total)*100)
- 
+
+election_data_clean_red_7 <- election_data_clean_red |> 
+  select(id_join, votes_elec_total, codigo_ccaa, date_elec, votes_elec_party_perc, party_collect) |> 
+  distinct(id_join, date_elec, .keep_all = TRUE)
+
+survey_clean_collect_red_7 <- survey_clean_collect_red |> 
+  select(id_join, vote_int, id_pollster)
+
+
+# Joining survey_clean with election_data_clean using the id_join from both tables
+survey_elec <- election_data_clean_red_7 |> 
+  left_join(survey_clean_collect_red_7, by = c("id_join" = "id_join"), relationship = "many-to-many") 
+
+
 #subtracting the voting intentions (in percentage) of the percenatage of votes gained per per party per election. 
 #As the difference can be both positive and negative, the differences in votes are squared to account for the negatives
 survey_elec<-survey_elec |>
@@ -520,26 +541,37 @@ survey_elec<-survey_elec |>
 survey_elec<-survey_elec |> 
    group_by(date_elec) |> 
   mutate(avg_diff_vote_int = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |> 
-  ungroup() 
+  ungroup()
+
+```
+
+
+### Q7 In which election were the polls most wrong?
+
+```{r}
+ 
 
 #Checking in which election the polls were most wrong 
- survey_elec |> 
+survey_elec_result<- survey_elec |> 
    distinct(avg_diff_vote_int, date_elec)
+
+survey_elec_result
 
 ```
 
 ```{r}
-ggplot(election_data_mika, 
-       aes(x = convocatorias, 
-           y = vote_share, 
-           fill = party_collect)) +
-  geom_bar(stat = "identity") + 
-  scale_fill_manual(values = party_colors) +
-  labs(title = "Vote distribution", 
+
+survey_elec_result<- survey_elec_result |> 
+  mutate(date_elec_factor = as.character(date_elec))
+
+
+ggplot(survey_elec_result, aes(x = date_elec_factor, y = avg_diff_vote_int)) +
+  geom_col() +
+  labs(title = "Error in election polls per election", 
        x = "Election", 
-       y = "Vote share") +
-    guides(fill = guide_legend(title = "Party"))+
+       y = "Average Difference votes and votes intentions") +
   theme_minimal()
+
 ```
 
 ### Q8 How were the polls wrong in national parties (PSOE, PP, VOX, CS, MP, UP - IU)?
@@ -554,10 +586,25 @@ survey_elec_national<-survey_elec |>
   ungroup() 
 
 #Obtaining the results
-survey_elec_national |> 
+survey_elec_national<-survey_elec_national |> 
   distinct(avg_diff_poll, date_elec, party_collect) |> 
   arrange(date_elec)
+
+survey_elec_national<-survey_elec_national |> 
+  mutate(date_elec_factor = as.character(date_elec))
 ```
+
+```{r}
+ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = date_elec_factor)) +
+  geom_col(position = "dodge") +
+  labs(title = "Error in election polls per party", 
+       x = "Party", 
+       y = "Average Difference votes and votes intentions",
+       fill = "Election") +
+  theme_minimal()
+
+```
+
 
 ### Q9 Which polling houses got it right the most and which ones deviated the most from the results?
 
@@ -567,19 +614,28 @@ survey_elec<-survey_elec |>
   group_by(id_pollster, date_elec) |> 
   mutate(avg_diff_pollhouse = sqrt(mean(diff_vote_int_2, na.rm = TRUE))) |>
   ungroup() |> 
+  drop_na(avg_diff_pollhouse)
+
+survey_elec<-survey_elec |> 
   group_by(date_elec) |> 
   mutate(max_avg_diff_pollhouse = max(avg_diff_pollhouse)) |> 
-  mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse))
+  mutate(min_avg_diff_pollhouse = min(avg_diff_pollhouse)) |> 
+  ungroup()
 
 #Obtaining the result for the maximum polling error
-survey_elec|> 
+result_max<-survey_elec|> 
   distinct(max_avg_diff_pollhouse, date_elec, id_pollster) |> 
   arrange(date_elec)
 
+result_max
+
+
 #Obtaining the result for the minimum polling error
-survey_elec|> 
+result_min<-survey_elec|> 
   distinct(min_avg_diff_pollhouse, date_elec, id_pollster) |> 
   arrange(date_elec)
+
+result_min
   
 ```
 
