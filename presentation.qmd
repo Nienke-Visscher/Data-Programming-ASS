@@ -73,10 +73,7 @@ distinct_parties <- election_data_clean |>
 
 abbrev_test <- abbrev |> 
   full_join(distinct_parties, by = c("denominacion" = "party")) 
-  
-#abbrev_test <- abbrev |> 
-  #full_join(distinct_parties, by = c("denominacion" = "party")) |> 
-  #filter(is.na(siglas))
+
 
 #Creating a new column with the collected parties
  abbrev_collect<-abbrev_test |> 
@@ -203,6 +200,10 @@ survey_clean_collect_red <- survey_clean_collect_red |>
 election_data_clean <- election_data_clean |> 
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
+
+## Video greeting from Alex
+
+![](images/IMG_7004.MOV)
 
 ## Q1
 
@@ -510,6 +511,7 @@ election_data_clean <- election_data_clean |>
 ```
 
 ## Q6 II
+
 ```{r}
 #| echo: true
 
@@ -569,6 +571,7 @@ survey_elec<-survey_elec |>
 ```
 
 ## Q7
+
 In which election were the polls most wrong?
 
 ```{r}
@@ -614,6 +617,7 @@ survey_elec_national<-survey_elec |>
 ```
 
 ## Q8 II
+
 ```{r}
 #| output: true
 #| echo: true
@@ -626,8 +630,6 @@ survey_elec_national |>
 survey_elec_national<-survey_elec_national |> 
   mutate(date_elec_factor = as.character(date_elec))
 ```
-
-
 
 ## Q8 Visualisation
 
@@ -675,8 +677,8 @@ result_max<-survey_elec|>
 result_max
 ```
 
-
 ## Q9 II
+
 ```{r}
 #| echo: true
 #| output: true
@@ -691,11 +693,7 @@ result_min<-survey_elec|>
 result_min
 ```
 
-
-
 # Additional insights
-
-
 
 ## Voter turnout: Regions
 
@@ -976,6 +974,7 @@ ggplot(esp_can) +
 ## All elections since 2008
 
 Data preperation.
+
 ```{r}
 #| echo: true
 
@@ -1027,6 +1026,7 @@ ggplot(esp_can) +
 ## The 2019 Elections
 
 Data preperation.
+
 ```{r}
 #| echo: true
 
@@ -1048,6 +1048,7 @@ elec_winners_2019 <-
 ```
 
 ## Mapping the 2019 Elections
+
 ```{r}
 #| output-location: slide
 
