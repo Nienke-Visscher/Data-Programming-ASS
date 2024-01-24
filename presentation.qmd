@@ -1269,6 +1269,7 @@ p14 <-
      edge.color = "black")
 ```
 
+## Network analysis plot
 
 ```{r, fig.height= 8, fig.width=8 }
 #| output-location: slide
