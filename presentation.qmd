@@ -201,10 +201,6 @@ election_data_clean <- election_data_clean |>
   mutate(id_join = paste(substr(date_elec, 1, 7), party_collect, sep = "-")) 
 ```
 
-## Video greeting from Alex
-
-![](images/IMG_7004.MOV)
-
 ## Q1
 
 How is the vote of national parties (PSOE, PP, VOX, CS, MP, UP - IU) distributed against regional or nationalist parties?
@@ -259,9 +255,10 @@ graph_data <- election_data_q1 |>
 ## Q1 Visualisation
 
 ```{r}
-#| output-location: column-fragment
+#| echo: true
 
-ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = party_type, group = party_type)) +
+
+p1<-ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = party_type, group = party_type)) +
   geom_line() +
   geom_text(aes(label = sprintf("%.1f%%", votes_elec_party_perc)), vjust = -0.5, hjust = 0.5, size = 3, color = "black") +
   labs(title = "Vote Share of National and Regional Parties\nin Elections between 2008 and 2019",
@@ -272,6 +269,15 @@ ggplot(data = graph_data, aes(x = date_elec, y = votes_elec_party_perc, color = 
   theme_classic() +
   theme(legend.position = "none")
 ```
+
+## Q1 Visualisation
+
+```{r}
+#| output-location: slide
+
+p1
+```
+
 
 ## Q2
 
@@ -300,9 +306,10 @@ election_data_clean_2 <-election_data_clean |>
 ## Q2 Visualisation
 
 ```{r}
-#| output-location: column-fragment
+#| echo: true
 
-ggplot(q2_final_result, 
+p2 <- 
+  ggplot(q2_final_result, 
        aes(x =party_collect))+
   geom_bar(stat = "count", fill = "black") +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
@@ -313,6 +320,15 @@ ggplot(q2_final_result,
   theme_classic() +
   facet_wrap(~date_elec, scales = "free_x")
 ```
+
+## Q2 Visualisation
+
+```{r}
+#| output-location: slide
+
+p2
+```
+
 
 ## Q3
 
@@ -353,14 +369,15 @@ parties_2nd_place_after_PP <- election_data_q3 |>
   select(date_elec, municipio, party, party_collect)   
 ```
 
-## Q3 Visualisation
+## Q3 Visualisation I
 
 This barplot illustrates the second place finisher for municipalities where the PSOE won.
 
 ```{r}
-#| output-location: column-fragment
+#| echo: true
 
-ggplot(parties_2nd_place_after_PSOE, 
+p3 <-
+  ggplot(parties_2nd_place_after_PSOE, 
        aes(x =party_collect))+
   geom_bar(stat = "count", fill = "black") +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
@@ -371,13 +388,23 @@ ggplot(parties_2nd_place_after_PSOE,
   theme_classic()
 ```
 
+## Q3 Visualisation I
+```{r}
+#| output-location: slide
+
+p3
+```
+
+## Q3 Visualisation II
+
+
 This barplot illustrates the second place finisher for municipalities where the PP won.
 
 ```{r}
-#| output-location: column-fragment
+#| echo: true
 
-
-ggplot(parties_2nd_place_after_PP, 
+p4 <-
+  ggplot(parties_2nd_place_after_PP, 
        aes(x =party_collect))+
   geom_bar(stat = "count", fill = "black") +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
@@ -387,6 +414,13 @@ ggplot(parties_2nd_place_after_PP,
     guides(fill = guide_legend(title = "Party")) +
   theme_classic()
 ```
+
+## Q3 Visualisation II
+
+```{r}
+p4
+```
+
 
 ## Q3 Answer
 
@@ -433,7 +467,7 @@ election_data_turnout <- election_data_clean |>
     turnout_pcg = round((((votos_candidaturas+votos_nulos+votos_blancos)/censo)*100), digits = 2)) |>
   ungroup() |>
   group_by(municipio_id) |>  
-  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos+votos_nulos))*100) |>
   ungroup() 
 
 #Low turnout dataset
@@ -448,9 +482,10 @@ low_turnout_winners <- election_data_turnout |>
 Historically, since 2008, in low turnout elections, smaller parties have had a higher chance of winning the election.
 
 ```{r}
-#| output-location: fragment
+#| echo: true
 
-ggplot(low_turnout_winners, aes(x = party_collect)) +
+p5 <-
+  ggplot(low_turnout_winners, aes(x = party_collect)) +
   geom_bar(stat = "count") +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
   labs(title = "Number of Municipalities Won by Party in Low Turnout Elections",
@@ -461,18 +496,27 @@ ggplot(low_turnout_winners, aes(x = party_collect)) +
   theme_classic()
 ```
 
+## Q4 Visualisation
+
+```{r}
+#| output-location: slide
+
+p5
+```
+
 ## Q5
 
 How to analyze the relationship between census and vote? Is it true that certain parties win in rural areas?
 
 ```{r}
 #| echo: true
+
 #Subset with rural municipalities and their winners
 election_winners_rural<- election_data_clean |>  
   filter(censo < 30000, votes > 0) |> 
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
   group_by(date_elec, municipio_id) |>  
-  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos + votos_nulos))*100) |>
   ungroup() |> 
   dplyr::slice_max(n = 1, vote_share, by = c(municipio_id)) |> 
   select(vote_share, party, party_collect)
@@ -484,9 +528,11 @@ election_winners_rural<- election_data_clean |>
 As may be expected, the PP is most successful in elections in rural areas.
 
 ```{r}
-#| output-location: column-fragment
+#| echo: true
+
 #Plot the count of each party winning rural areas
-ggplot(election_winners_rural, aes(x = party_collect)) +
+p6 <-
+  ggplot(election_winners_rural, aes(x = party_collect)) +
   geom_bar(stat = "count") +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, size = 3) +
   labs(title = "Winning Parties in Rural Areas",
@@ -495,6 +541,15 @@ ggplot(election_winners_rural, aes(x = party_collect)) +
        y = "Count")+
   theme_classic()
 ```
+
+## Q5 Visualisation
+```{r}
+#| output-location: slide
+
+
+p6
+```
+
 
 ## Q6
 
@@ -591,14 +646,24 @@ survey_elec_result<- survey_elec_result |>
 ## Q7 Visualisation
 
 ```{r}
-#| output-location: fragment
-ggplot(survey_elec_result, aes(x = date_elec_factor, y = avg_diff_vote_int)) +
+#| echo: true
+
+p7 <-
+  ggplot(survey_elec_result, aes(x = date_elec_factor, y = avg_diff_vote_int)) +
   geom_col() +
   labs(title = "Error in election polls per election", 
        x = "Election", 
        y = "Average Difference votes and votes intentions") +
   theme_minimal()
 ```
+
+## Q7 Visualisation
+```{r}
+#| output-location: slide
+
+p7
+```
+
 
 ## Q8
 
@@ -634,9 +699,10 @@ survey_elec_national<-survey_elec_national |>
 ## Q8 Visualisation
 
 ```{r}
-# | output-location: column
+#| echo: true
 
-ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = date_elec_factor)) +
+p8 <-
+  ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = date_elec_factor)) +
   geom_col(position = "dodge") +
   labs(title = "Error in election polls per party", 
        x = "Party", 
@@ -644,6 +710,15 @@ ggplot(survey_elec_national, aes(x = party_collect, y = avg_diff_poll, fill = da
        fill = "Election") +
   theme_minimal()
 ```
+
+## Q8 Visualisation
+
+```{r}
+#| output-location: slide
+
+p8
+```
+
 
 ## Q9
 
@@ -684,7 +759,7 @@ result_max
 #| output: true
 
 
-#Obtaining the result for the maximum polling error
+#Obtaining the result for the minimum polling error
 result_min<-survey_elec|> 
   group_by(date_elec) |>
   filter(avg_diff_pollhouse == min(avg_diff_pollhouse)) |> 
@@ -744,7 +819,7 @@ election_data_clean_lollipop_avg$codigo_ccaa <- "00"
 election_data_clean_lollipop <- bind_rows(election_data_clean_lollipop, election_data_clean_lollipop_avg)
 ```
 
-## Lolipop graph data preperation I
+## Dumbell graph data preperation I
 
 ```{r Lollipop data 2}
 #| echo: true
@@ -767,7 +842,7 @@ election_data_clean_lollipop$codigo_ccaa <- factor(
 )
 ```
 
-## Lollipop graph data preperation II
+## Dumbell graph data preperation II
 
 ```{r Lollipop graph}
 #| echo: true
@@ -823,12 +898,13 @@ election_data_clean_lollipop_dif <- election_data_clean_lollipop |>
 
 ```
 
-## Lollipop graph - voter turnout differences
+## Dumbell graph - voter turnout differences
 
 ```{r}
-#| output-location: slide
+#| echo: true
 
-ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, group= mes), size = 2) + 
+p9 <-
+  ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, group= mes), size = 2) + 
   geom_point(aes(color = mes)) +
   labs(title = "Difference in Voter Turnout\nby Region (April vs. November 2019)",
        x = "",
@@ -891,6 +967,13 @@ ggplot(election_data_clean_lollipop, aes(x = voter_turnout, y = codigo_ccaa, gro
   theme(plot.margin = margin(5, 10, 5, -8))
 ```
 
+## Dumbell graph
+```{r}
+#| output-location: slide
+
+p9
+```
+
 ## Election Winners in November 2019
 
 Data preperation.
@@ -900,12 +983,12 @@ Data preperation.
 
 election_data_clean_red_winner_2019_b <-
   election_data_clean |>  
-  dplyr::select(-anno, -mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |>  
+  dplyr::select(-anno, -mes, -vuelta,-participacion_1, -participacion_2) |>  
   filter(date_elec == "2019-11-01") |>  
   drop_na(votes) |>  
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
   group_by(date_elec, municipio_id) |>  
-  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |> 
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos + votos_nulos))*100) |> 
   ungroup() |> 
   dplyr::slice_max(n = 1, vote_share, by = c(municipio_id)) |>  
   dplyr::select(municipio_id, vote_share, party_collect, party)
@@ -938,7 +1021,7 @@ elec_winner_munic_2019b <- munic |>
 ## Map Election Winners in November 2019
 
 ```{r}
-#| output-location: slide
+#| echo: true
 
 # party colors
 party_colors <- c("UP_IU"="#8968CD",  
@@ -955,7 +1038,8 @@ party_colors <- c("UP_IU"="#8968CD",
                   "MP" = "#02988B") 
 
 
-ggplot(esp_can) +
+p10 <-
+  ggplot(esp_can) +
   geom_sf() +
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
@@ -971,6 +1055,14 @@ ggplot(esp_can) +
   coord_sf()
 ```
 
+## Map Election Winners in November 2019
+```{r}
+#| output-location: slide
+
+p10
+```
+
+
 ## All elections since 2008
 
 Data preperation.
@@ -980,11 +1072,11 @@ Data preperation.
 
 election_winners <-   
   election_data_clean |>
-  dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2) |> 
   drop_na(votes) |>
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
   group_by(date_elec, municipio_id) |> 
-  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos + votos_nulos))*100) |>
   ungroup() |> 
   dplyr::slice_max(n = 1, vote_share, by = c(municipio_id, date_elec)) |>
   dplyr::select(municipio_id, vote_share, party_collect, party, anno, date_elec) 
@@ -996,7 +1088,7 @@ elec_winners_all_time <- munic |>
 ## Mapping all elections since 2008
 
 ```{r}
-#| output-location: slide
+#| echo: true
 
 election_names <-
   as_labeller(c(
@@ -1008,7 +1100,8 @@ election_names <-
     '2019-11-01'="November 2019"
     )) 
 
-ggplot(esp_can) +
+p11 <-
+  ggplot(esp_can) +
   geom_sf() +
   geom_sf(data = can_prov) + 
   geom_sf(data = can_box) +
@@ -1023,6 +1116,14 @@ ggplot(esp_can) +
   facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
 
+## Mapping all elections since 2008
+```{r}
+#| output-location: slide
+
+p11
+```
+
+
 ## The 2019 Elections
 
 Data preperation.
@@ -1033,11 +1134,11 @@ Data preperation.
 election_winners_2019 <-
   election_data_clean |> 
   filter(anno == "2019")|>
-  dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2, -votos_nulos) |> 
+  dplyr::select(-mes, -vuelta,-participacion_1, -participacion_2) |> 
   drop_na(votes) |>
   mutate(municipio_id = paste(codigo_provincia, codigo_municipio, sep = "-")) |> 
   group_by(date_elec, municipio_id) |> 
-  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos))*100) |>
+  mutate(vote_share = (votes / (votos_candidaturas + votos_blancos + votos_nulos))*100) |>
   ungroup() |>
   dplyr::slice_max(n = 1, vote_share, by = c(municipio_id, date_elec)) |>
   dplyr::select(municipio_id, vote_share, party_collect, party, anno, date_elec)  
@@ -1050,14 +1151,15 @@ elec_winners_2019 <-
 ## Mapping the 2019 Elections
 
 ```{r}
-#| output-location: slide
+#| echo: true
 
 election_names <- as_labeller(c(
   '2019-04-01'="April 2019",
   '2019-11-01'="November 2019" 
   )) 
 
-ggplot(esp_can) +
+p12 <-
+  ggplot(esp_can) +
   geom_sf() + 
   geom_sf(data = can_prov) +
   geom_sf(data = can_box) + 
@@ -1072,6 +1174,14 @@ ggplot(esp_can) +
   coord_sf() + 
   facet_wrap(~date_elec, labeller = as_labeller(election_names))
 ```
+
+## Mapping the 2019 Elections
+```{r}
+#| output-location: slide
+
+p12
+```
+
 
 ## Vote distribution
 
@@ -1108,9 +1218,10 @@ election_data_mika <- election_data_mika |>
 ## Slopegraph
 
 ```{r}
-#| output-location: slide
+#| echo: true
 
-newggslopegraph(dataframe = election_data_mika,
+p13 <-
+  newggslopegraph(dataframe = election_data_mika,
                 Times = convocatorias,
                 Measurement = vote_share,
                 Grouping = party_collect,
@@ -1120,10 +1231,19 @@ newggslopegraph(dataframe = election_data_mika,
 
 ```
 
+## Slopegraph
+```{r}
+#| output-location: slide
+
+p13
+```
+
+
 ## Network analysis
 
 ```{r}
 #| echo: true
+
 survey_data_mika <- survey_clean |> 
   distinct(date_elec, pollster, media) |> 
   select(-date_elec)
@@ -1132,9 +1252,12 @@ network<- graph_from_data_frame(survey_data_mika, directed = F)
 deg <- degree(network, mode="all")
 ```
 
+## Network analysis plot
 ```{r}
-#| output-location: slide
-plot(network, 
+#| echo: true
+
+p14 <- 
+  plot(network, 
      main="Pollster & Media network",
      layout= layout_nicely,
      vertex.size=deg*9,
@@ -1144,4 +1267,11 @@ plot(network,
      edge.arrow.size = 0, 
      edge.arrow.width = 0, 
      edge.color = "black")
+```
+
+
+```{r, fig.height= 8, fig.width=8 }
+#| output-location: slide
+
+p14
 ```
